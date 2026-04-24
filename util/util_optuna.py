@@ -4,8 +4,8 @@ import optuna
 from . import util_main as UMN
 from . import util_constants as UC
 
-singlelayer_search_space = {'l2_weight_decay_exp': [0], 'dropout': [0.0], "learning_rate_exp": [-4], "batch_size": [2048], "data_norm": [True]}
-multilayer_search_space = {'l2_weight_decay_exp': [0], 'dropout': [0.0], "batch_size": [2048], "data_norm": [True], 'learning_rate_exp': [-4] }
+singlelayer_search_space = {'l2_weight_decay_exp': [0], "learning_rate_exp": [-4], "batch_size": [2048], "data_norm": [True]}
+multilayer_search_space = {'l2_weight_decay_exp': [0], "batch_size": [2048], "data_norm": [True], 'learning_rate_exp': [-4] }
 
 def study_callback(study, trial):
     study_sampler_path = study.user_attrs['sampler_filepath']
@@ -113,15 +113,6 @@ def weight_decay_string_format(weight_decay_exp, is_short = False ):
         return f'wd{wd_int}'
 
 
-#format string to make dropout be appendable to a run name
-def dropout_string_format(dropout, is_short = False):
-    dropout_int = int(dropout * 100)
-    if is_short == False:
-        return f'dropout{dropout_int}'
-    else:
-        return f'do{dropout_int}'
-
-
 def get_run_and_short_names(configdict, layer_idx, name_params):
     other_long_arr = []
     other_short_arr = []
@@ -141,12 +132,6 @@ def get_run_and_short_names(configdict, layer_idx, name_params):
         other_long_arr.append(wd_long)
         other_short_arr.append(wd_short)
     
-    if 'dropout' in name_params.keys():
-        do_long = dropout_string_format(name_params['dropout'],is_short = False)
-        do_short = dropout_string_format(name_params['dropout'],is_short = True)
-        other_long_arr.append(do_long)
-        other_short_arr.append(do_short)
-
     if 'batch_size' in name_params.keys():
         bsz_long = batch_size_string_format(name_params['batch_size'] , is_short = False)
         bsz_short = batch_size_string_format(name_params['batch_size'] , is_short = True)

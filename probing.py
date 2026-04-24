@@ -142,7 +142,6 @@ def valid_test_model(model, scaler, generator, loss_fn, valid_subset, batch_size
     return total_loss, truths, preds
 
 def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu'):
-    #dropout = trial.suggest_float('dropout', 0.25, 0.75, step=0.25)
 
     # suggested params
     layer_idx = trial.suggest_categorical('layer_idx', list(range(configdict['model_num_layers'])))
@@ -152,7 +151,6 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
 
     l2_weight_decay = 10.**l2_weight_decay_exp
 
-    dropout = trial.suggest_float('dropout', 0.0, 0.75, step=0.25)
     batch_size = trial.suggest_categorical('batch_size', [64,256,1024,2048, 4196])
     data_norm = trial.suggest_categorical('data_norm', [True, False])
     lr_exp = trial.suggest_int('learning_rate_exp', -5, -1, step=1)
@@ -171,7 +169,7 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
         scaler = StandardScaler(with_mean = True, with_std = True, use_64bit = configdict['is_64bit'], dim=configdict['model_dim'], use_constant_feature_mask = configdict['standard_scaler_constant_feature_mask'], device = device)
 
     # init model
-    model = MLPProbe(in_dim =configdict['model_dim'], out_dim = datadict['num_classes'], dropout = dropout, initial_dropout = configdict['probe_initial_dropout'], hidden_dims = configdict['probe_hidden_dims'])
+    model = MLPProbe(in_dim =configdict['model_dim'], out_dim = datadict['num_classes'], hidden_dims = configdict['probe_hidden_dims'])
     # init rng
     torch_gen = torch.Generator(device=device)
     torch_gen.manual_seed(configdict['torch_seed'])
@@ -219,7 +217,7 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
     run_name = None
     short_name = None
     if configdict['use_wandb'] == True:
-        param_dict = {'l2_weight_decay_exp': l2_weight_decay_exp, 'dropout': dropout, 'learning_rate_exp': lr_exp, 'batch_size': batch_size, 'data_norm': data_norm, 'layer_idx': layer_idx}
+        param_dict = {'l2_weight_decay_exp': l2_weight_decay_exp, 'learning_rate_exp': lr_exp, 'batch_size': batch_size, 'data_norm': data_norm, 'layer_idx': layer_idx}
         run_name, short_name = UO.get_run_and_short_names(configdict, layer_idx, param_dict) 
         cur_run = UW.init(wandbdict, {'id': run_name, 'name': short_name})
         UW.add_to_summary(cur_run, param_dict)
@@ -295,7 +293,7 @@ if __name__ == "__main__":
     parser.add_argument("-wdb", "--use_wandb", type=strtobool, default=True, help="sync to wandb")
     parser.add_argument("-cd", "--use_cuda", type=strtobool, default=True, help="use cuda")
     parser.add_argument("-ev", "--eval", type=strtobool, default=False, help="eval")
-    parser.add_argument("-scl", "--standard_scaler", type=strtobool, default=False, help="train standard scaler")
+    parser.add_argument("-st", "--stats", type=strtobool, default=False, help="calculate stats")
     parser.add_argument("-eb", "--eval_best", type=strtobool, default=False, help="eval on the best trial per model")
     parser.add_argument("-pr", "--part_rto", type=strtobool, default=False, help="calculate participation ratio")
     parser.add_argument("-en", "--eval_nll", type=strtobool, default=False, help="do eval on training dataset for nll comps")
@@ -326,13 +324,13 @@ if __name__ == "__main__":
     # wandb stuff
     configdict = UW.build_config(args, datadict, subsetdict)
     wandbdict = UW.build_initdict(args, configdict)
-    if args.standard_scaler == True:
+    if args.stats == True:
         torch_gen = torch.Generator(device=device)
         torch_gen.manual_seed(configdict['torch_seed'])
         train_subset = subsetdict['train_subset']
         for layer_idx in range(configdict['model_num_layers']): 
-            subsetdict['train_subset'].dataset.set_layer_idx(layer_idx)
-            cur_pr, cur_mean, cur_std = calculate_participation_ratio(torch_gen, subsetdict['train_subset'], subsetdict['train_size'], configdict['model_dim'] , cur_mean = None, cur_std = None, shuffle = True, device=device)
+            subsetdict['pilot_train_subset'].dataset.set_layer_idx(layer_idx)
+            cur_pr, cur_mean, cur_std = calculate_participation_ratio(torch_gen, subsetdict['pilot_train_subset'], subsetdict['pilot_train_size'], configdict['model_dim'] , cur_mean = None, cur_std = None, shuffle = True, device=device)
             print(layer_idx, cur_pr, cur_mean, cur_std)
             UP.save_part_rto(cur_pr, configdict, layer_idx, is_train = True)
             UP.save_mean(cur_mean, configdict, layer_idx, is_train = True)
@@ -367,7 +365,6 @@ if __name__ == "__main__":
         for param_dict in eval_params:
             layer_idx = param_dict['layer_idx']
             trial_number = param_dict['trial_number']
-            dropout = param_dict['dropout']
             batch_size = param_dict['batch_size']
             data_norm = param_dict['data_norm']
             
@@ -408,7 +405,7 @@ if __name__ == "__main__":
                     print(f'saving pr ({cur_pr}, train: {args.eval_nll}) for {args.dataset} at layer {layer_idx}')
                     UP.save_part_rto(cur_pr, configdict, layer_idx, trial_number)
             elif args.eval == True:
-                model = MLPProbe(in_dim =configdict['model_dim'], out_dim = datadict['num_classes'], dropout = dropout, initial_dropout = configdict['probe_initial_dropout'], hidden_dims = configdict['probe_hidden_dims'])
+                model = MLPProbe(in_dim =configdict['model_dim'], out_dim = datadict['num_classes'],  hidden_dims = configdict['probe_hidden_dims'])
 
                 UP.load_model_dict(model, configdict, layer_idx, trial_number, device=device)
 

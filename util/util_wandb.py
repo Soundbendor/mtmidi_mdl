@@ -53,19 +53,15 @@ def build_config(parser_args, datadict, subsetdict):
         _config['probe_hidden_dims'] = []
         _config['early_stopping_check_interval'] = UC.EARLY_STOPPING_CHECK_INTERVAL
         _config['early_stopping_boredom'] = UC.EARLY_STOPPING_BOREDOM
-        _config['probe_initial_dropout'] =  UC.MLPPROBE_INITIAL_DROPOUT
     elif parser_args.expr_type == 'linear':
         _config['probe_hidden_dims'] = []
         _config['early_stopping_check_interval'] = UC.EARLY_STOPPING_CHECK_INTERVAL
         _config['early_stopping_boredom'] = UC.EARLY_STOPPING_BOREDOM
-        _config['probe_initial_dropout'] =  UC.LINEARPROBE_INITIAL_DROPOUT
 
     elif parser_args.expr_type == 'mlp_2l':
         _config['probe_hidden_dims'] = UC.MLPPROBE_HIDDEN_DIMS
         _config['early_stopping_check_interval'] = UC.EARLY_STOPPING_CHECK_INTERVAL
         _config['early_stopping_boredom'] = UC.EARLY_STOPPING_BOREDOM
-        _config['probe_initial_dropout'] =  UC.MLPPROBE_INITIAL_DROPOUT
-        _config['probe_hidden_dropout'] =  UC.MLPPROBE_HIDDEN_DROPOUT
 
     _config['train_folds'] = subsetdict['train_folds']
     _config['valid_folds'] = subsetdict['valid_folds']
@@ -102,8 +98,8 @@ def get_main_callback(initdict, as_multirun = True):
     return WBC(wandb_kwargs=initdict, as_multirun = as_multirun)
 
 def trial_name_callback(study, trial):
-    default_id = f"trial-{trial.number}_layer-{trial.params.get('layer_index', '')}_weightdecay-{trial.params.get('l2_weight_decay_exp', '')}_dropout-{trial.params.get('dropout', '')}"
-    default_name = f"t{trial.number}_l{trial.params.get('layer_index', '')}_lwd{trial.params.get('l2_weight_decay_exp', '')}_do{trial.params.get('dropout', '')}"
+    default_id = f"trial-{trial.number}_layer-{trial.params.get('layer_index', '')}_weightdecay-{trial.params.get('l2_weight_decay_exp', '')}"
+    default_name = f"t{trial.number}_l{trial.params.get('layer_index', '')}_lwd{trial.params.get('l2_weight_decay_exp', '')}"
     if wandb.run is not None:
         #wandb.run.id = trial.user_attrs.get('run_name', default_id) # immutable
         wandb.run.name = trial.user_attrs.get('short_name', default_name)
