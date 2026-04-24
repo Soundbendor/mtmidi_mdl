@@ -48,7 +48,6 @@ def build_config(parser_args, datadict, subsetdict):
     _config['model_dim'] = model_shape[1]
     _config['model_num_layers'] = model_shape[0]
     _config['dataloader_shuffle'] = UC.DATALOADER_SHUFFLE
-    _config['ebic_gamma'] = UC.EBIC_GAMMA
     _config['standard_scaler_constant_feature_mask'] = UC.STANDARD_SCALER_CONSTANT_FEATURE_MASK
     if parser_args.expr_type == 'mlp':
         _config['probe_hidden_dims'] = []

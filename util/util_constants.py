@@ -28,7 +28,8 @@ LEARNING_RATE = 10.**(-3)
 # no l2 weight decay (set to -2 in original which meant turn off)
 DATALOADER_SHUFFLE = True
 TRAIN_FOLDS = list(range(1,15))
-VALID_FOLDS = list(range(15,18))
+PILOT_TRAIN_FOLDS = list(range(15,17))
+PILOT_VALID_FOLDS = list(range(17,18))
 TEST_FOLDS = list(range(18,21))
 IS_64BIT = False
 SEED = 39
@@ -42,7 +43,6 @@ MLPPROBE_INITIAL_DROPOUT = True
 MLPPROBE_HIDDEN_DROPOUT = True
 MLPPROBE_HIDDEN_DIMS = [512]
 
-EBIC_GAMMA = 1.0
 
 # for less than 11 classes
 CM_FIGSIZE_S = (5,5)
