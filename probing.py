@@ -146,13 +146,8 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
     # suggested params
     layer_idx = trial.suggest_categorical('layer_idx', list(range(configdict['model_num_layers'])))
     
-    l2_weight_decay_exp = trial.suggest_int('l2_weight_decay_exp', -5, 0, step= 1)
-    l2_weight_decay = 0
 
-    l2_weight_decay = 10.**l2_weight_decay_exp
 
-    batch_size = trial.suggest_categorical('batch_size', [64,256,1024,2048, 4196])
-    data_norm = trial.suggest_categorical('data_norm', [True, False])
     lr_exp = trial.suggest_int('learning_rate_exp', -5, -1, step=1)
     learning_rate = 10**lr_exp
 
@@ -176,10 +171,7 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
     # init opt/loss
 
     opt_fn = None
-    if l2_weight_decay_exp < -2:
-        opt_fn = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=l2_weight_decay)
-    else:
-        opt_fn = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    opt_fn = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     plateau_sched = torch.optim.lr_scheduler.ReduceLROnPlateau(opt_fn, patience=UC.SCHED_PATIENCE)
     warmup_sched = torch.optim.lr_scheduler.LinearLR(opt_fn, start_factor=UC.WARMUP_FACTOR, end_factor=1.0, total_iters=UC.WARMUP_BATCH_COUNT, last_epoch=-1)

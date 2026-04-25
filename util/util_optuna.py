@@ -4,8 +4,7 @@ import optuna
 from . import util_main as UMN
 from . import util_constants as UC
 
-singlelayer_search_space = {'l2_weight_decay_exp': [0], "learning_rate_exp": [-4], "batch_size": [2048], "data_norm": [True]}
-multilayer_search_space = {'l2_weight_decay_exp': [0], "batch_size": [2048], "data_norm": [True], 'learning_rate_exp': [-4] }
+search_space = {'learning_rate_exp': [-4] }
 
 def study_callback(study, trial):
     study_sampler_path = study.user_attrs['sampler_filepath']
@@ -104,15 +103,6 @@ def learning_rate_string_format(lr_exp, is_short = False ):
         return f'lr{lr_int}'
 
 
-#format string to make weight_decay be appendable to a run name
-def weight_decay_string_format(weight_decay_exp, is_short = False ):
-    wd_int = abs(int(weight_decay_exp))
-    if is_short == False:
-        return f'weightdecay{wd_int}'
-    else: 
-        return f'wd{wd_int}'
-
-
 def get_run_and_short_names(configdict, layer_idx, name_params):
     other_long_arr = []
     other_short_arr = []
@@ -125,12 +115,6 @@ def get_run_and_short_names(configdict, layer_idx, name_params):
         other_long_arr.append(lrexp_long)
         other_short_arr.append(lrexp_short)
 
-
-    if 'l2_weight_decay_exp' in name_params.keys():
-        wd_long = weight_decay_string_format(name_params['l2_weight_decay_exp'] , is_short = False)
-        wd_short = weight_decay_string_format(name_params['l2_weight_decay_exp'] , is_short = True)
-        other_long_arr.append(wd_long)
-        other_short_arr.append(wd_short)
     
     if 'batch_size' in name_params.keys():
         bsz_long = batch_size_string_format(name_params['batch_size'] , is_short = False)

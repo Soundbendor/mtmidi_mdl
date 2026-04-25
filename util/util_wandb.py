@@ -98,8 +98,8 @@ def get_main_callback(initdict, as_multirun = True):
     return WBC(wandb_kwargs=initdict, as_multirun = as_multirun)
 
 def trial_name_callback(study, trial):
-    default_id = f"trial-{trial.number}_layer-{trial.params.get('layer_index', '')}_weightdecay-{trial.params.get('l2_weight_decay_exp', '')}"
-    default_name = f"t{trial.number}_l{trial.params.get('layer_index', '')}_lwd{trial.params.get('l2_weight_decay_exp', '')}"
+    default_id = f"trial-{trial.number}_layer-{trial.params.get('layer_index', '')}"
+    default_name = f"t{trial.number}_l{trial.params.get('layer_index', '')}"
     if wandb.run is not None:
         #wandb.run.id = trial.user_attrs.get('run_name', default_id) # immutable
         wandb.run.name = trial.user_attrs.get('short_name', default_name)
