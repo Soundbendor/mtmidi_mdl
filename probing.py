@@ -141,22 +141,13 @@ def valid_test_model(model, scaler, generator, loss_fn, valid_subset, batch_size
 
     return total_loss, truths, preds
 
-def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu'):
+def run_expr(datadict, subsetdict, configdict, wandbdict, device='cpu'):
 
     # suggested params
-    layer_idx = trial.suggest_categorical('layer_idx', list(range(configdict['model_num_layers'])))
     
 
 
-    lr_exp = trial.suggest_int('learning_rate_exp', -5, -1, step=1)
-    learning_rate = 10**lr_exp
-
-    run_name = UO.get_run_name(configdict, layer_idx, is_short = False)
-    trial_number = trial.number
-    
-    subsetdict['train_subset'].dataset.set_layer_idx(layer_idx)
-    subsetdict['valid_subset'].dataset.set_layer_idx(layer_idx)
-     
+        
     # load pre-trained scaler
     scaler = None
 
