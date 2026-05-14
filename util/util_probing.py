@@ -12,62 +12,55 @@ from sklearn.model_selection import train_test_split
 
 
 
-def get_train_test_subsets(dataset_obj, datadict, train_folds = UC.TRAIN_FOLDS, pilot_train_folds = UC.PILOT_TRAIN_FOLDS, pilot_valid_folds = UC.PILOT_VALID_FOLDS, test_folds = UC.TEST_FOLDS):
+def get_train_test_subsets(dataset_obj, datadict, train_folds = UC.TRAIN_FOLDS, test_folds = UC.TEST_FOLDS):
     idx_dict = {}
     fold_col = 'fold'
-    if datadict['train_on_middle'] == True:
-        fold_col = 'fold_middle'
-    else:
-        # default to given folds
-        num_examples = datadict['num_examples']
-        _idxs = np.arange(num_examples)
-        temp_df = pl.DataFrame({fold_col: datadict['df'][fold_col], 'idxs': _idxs})
-        idx_dict['train_idxs'] = temp_df.filter(pl.col(fold_col).is_in(train_folds))['idxs'].to_numpy()
-        idx_dict['pilot_train_idxs'] = temp_df.filter(pl.col(fold_col).is_in(pilot_train_folds))['idxs'].to_numpy()
-        idx_dict['pilot_valid_idxs'] = temp_df.filter(pl.col(fold_col).is_in(pilot_valid_folds))['idxs'].to_numpy()
-        idx_dict['test_idxs'] = temp_df.filter(pl.col(fold_col).is_in(test_folds))['idxs'].to_numpy()
-    train_subset = TUD.Subset(dataset_obj, idx_dict['train_idxs'])
-    pilot_train_subset = None
-    pilot_valid_subset = None
-    test_subset = None
-    weights = np.array([])
-    train_size = idx_dict['train_idxs'].shape[0]
-    pilot_train_size = idx_dict['pilot_train_idxs'].shape[0]
-    pilot_valid_size = idx_dict['pilot_valid_idxs'].shape[0]
-    test_size = idx_dict['test_idxs'].shape[0]
+    # default to given folds
+    num_examples = datadict['num_examples']
+    _idxs = np.arange(num_examples)
+    temp_df = pl.DataFrame({fold_col: datadict['df'][fold_col], 'idxs': _idxs})
+    online_folds = []
+    for train_fold_idx in range(1,len(train_folds)):
+        cur_train_online_folds = train_folds[:train_fold_idx]
+        cur_eval_online_folds = train_folds[train_fold_idx]
+        train_online_idxs = temp_df.filter(pl.col(fold_col).is_in(cur_train_online_folds))['idxs'].to_numpy()
+        eval_online_idxs = temp_df.filter(pl.col(fold_col).is_in(cur_eval_online_folds))['idxs'].to_numpy()
+        train_online_num_folds = len(cur_train_online_folds)
+        eval_online_num_folds = len(cur_eval_online_folds)
+        train_online_num_idxs = cur_train_online_idxs.shape[0]
+        eval_online_num_idxs = cur_eval_online_idxs.shape[0]
+        train_online_subset = TUD.Subset(dataset_obj, train_online_idxs)
+        eval_online_subset = TUD.Subset(dataset_obj, eval_online_idxs)
+        cur_dict = {'train_idxs': train_online_idxs,
+                    'eval_idxs': eval_online_idxs,
+                    'train_num_folds': train_online_num_folds,
+                    'eval_num_folds': eval_online_num_folds,
+                    'train_num_idxs': train_online_num_idxs,
+                    'eval_num_idxs': eval_online_num_idxs,
+                    'train_subset': train_online_subset,
+                    'eval_subset': eval_online_subset
+                    }
+        online_folds.append(cur_dict)
+
+    idx_dict['online_folds'] = online_folds
+    idx_dict['full_train_idxs'] = temp_df.filter(pl.col(fold_col).is_in(train_folds))['idxs'].to_numpy()
+    idx_dict['full_train_folds'] = train_folds
+    idx_dict['full_train_size'] = idx_dict['full_train_idxs'].shape[0]
+    idx_dict['test_idxs'] = temp_df.filter(pl.col(fold_col).is_in(test_folds))['idxs'].to_numpy()
+    idx_dict['test_size'] = idx_dict['test_idxs'].shape[0]
+    idx_dict['test_folds'] = test_folds
     if datadict['is_balanced'] == False:
         cur_label = datadict['label']
-        pilot_train_df = datadict['df'][idx_dict['pilot_train_idxs']]
-        class_amounts = {k:v[0] for (k,v) in pilot_train_df[cur_label].value_counts().rows_by_key(cur_label).items()}
+        train_df = datadict['df'][idx_dict['full_train_idxs']]
+        class_amounts = {k:v[0] for (k,v) in train_df[cur_label].value_counts().rows_by_key(cur_label).items()}
         amount_arr = np.array([class_amounts[k] for k in datadict['label_arr']]).flatten()
         inv_class_prop = np.sum(amount_arr)/amount_arr
-        weights = inv_class_prop/np.max(inv_class_prop)
-    if idx_dict['pilot_train_idxs'].shape[0] > 0:
-        pilot_train_subset = TUD.Subset(dataset_obj, idx_dict['pilot_train_idxs'])
-    if idx_dict['pilot_valid_idxs'].shape[0] > 0:
-        pilot_valid_subset = TUD.Subset(dataset_obj, idx_dict['pilot_valid_idxs'])
+        idx_dict['weights'] = inv_class_prop/np.max(inv_class_prop)
+    if idx_dict['full_train_idxs'].shape[0] > 0:
+        idx_dict['full_train_subset'] = TUD.Subset(dataset_obj, idx_dict['full_train_idxs'])
     if idx_dict['test_idxs'].shape[0] > 0:
-        test_subset = TUD.Subset(dataset_obj, idx_dict['test_idxs'])
-    ret = {
-            'weights': weights,
-            'train_subset': train_subset,
-            'pilot_train_subset': pilot_train_subset,
-            'pilot_valid_subset': pilot_valid_subset,
-            'test_subset': test_subset,
-            'train_idxs': idx_dict['train_idxs'],
-            'pilot_train_idxs': idx_dict['pilot_train_idxs'],
-            'pilot_valid_idxs': idx_dict['pilot_valid_idxs'],
-            'test_idxs': idx_dict['test_idxs'],
-            'train_size': train_size,
-            'pilot_train_size': pilot_train_size,
-            'pilot_valid_size': pilot_valid_size,
-            'test_size': test_size,
-            'train_folds': train_folds,
-            'pilot_train_folds': pilot_train_folds,
-            'pilot_valid_folds': pilot_valid_folds,
-            'test_folds': test_folds
-            }
-    return ret
+        idx_dict['test_subset'] = TUD.Subset(dataset_obj, idx_dict['test_idxs'])
+    return idx_dict
 
 
 # input torch, output torch

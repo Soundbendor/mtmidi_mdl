@@ -27,9 +27,7 @@ BATCH_SIZE = 1024
 LEARNING_RATE = 10.**(-3)
 # no l2 weight decay (set to -2 in original which meant turn off)
 DATALOADER_SHUFFLE = True
-TRAIN_FOLDS = list(range(1,15))
-PILOT_TRAIN_FOLDS = list(range(15,17))
-PILOT_VALID_FOLDS = list(range(17,18))
+TRAIN_FOLDS = list(range(1,18))
 TEST_FOLDS = list(range(18,21))
 IS_64BIT = False
 SEED = 39
@@ -116,29 +114,11 @@ CHORDPROG_DATASETS = set(['secondary_dominant', 'modemix_chordprog', 'simple_pro
 MODELS = ['baseline-concat', 'baseline-chroma', 'baseline-mfcc', 'baseline-mel', 'musicgen-audio', 'musicgen-small', 'musicgen-medium', 'musicgen-large', 'jukebox', 'MERT-v1-95M', 'MERT-v1-330M', 'wav2vec2-base', 'wav2vec2-large']
 
 
-CLS_PPRINT = {'aic_rep': 'AIC (rep.)',
-              'aic_rep_avg': 'AIC (rep., per-sample)',
-              'bic_rep': 'BIC (rep.)',
-              'bic_rep_avg': 'BIC (rep., per-sample)',
-              'ebic_rep': 'EBIC (rep.)',
-              'ebic_rep_avg': 'EBIC (rep., per-sample)',
-              'aic_cls': 'AIC (cls)',
-              'aic_cls_avg': 'AIC (cls, per-sample)',
-              'bic_cls': 'BIC (rep.)',
-              'bic_cls_avg': 'BIC (cls, per-sample)',
-              'ebic_cls': 'EBIC (cls)',
-              'ebic_cls_avg': 'EBIC (cls, per-sample)',
-              'aic_pr': 'AIC (PR)',
-              'aic_pr_avg': 'AIC (PR, per-sample)',
-              'bic_pr': 'BIC (PR)',
-              'bic_pr_avg': 'BIC (PR, per-sample)',
-              'ebic_pr': 'EBIC (PR)',
-              'ebic_pr_avg': 'EBIC (PR, per-sample)',
-
-              'f1_macro': 'F1 (macro)',
+CLS_PPRINT = {'f1_macro': 'F1 (macro)',
               'f1_micro': 'F1 (micro)',
               'layer_idx': 'Layer Index',
               'loss': 'NLL',
+              'loss_base2': 'NLL_base2',
               'accuracy_score': 'Accuracy',
               'balanced_accuracy_score': 'Balanced Accuracy'
               }
