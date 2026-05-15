@@ -17,9 +17,11 @@ def get_train_test_subsets(dataset_obj, datadict, train_folds = UC.TRAIN_FOLDS, 
     fold_col = 'fold'
     # default to given folds
     num_examples = datadict['num_examples']
+    num_classes = datadict['num_classes'] 
     _idxs = np.arange(num_examples)
     temp_df = pl.DataFrame({fold_col: datadict['df'][fold_col], 'idxs': _idxs})
     online_folds = []
+    t1log2k = None
     for train_fold_idx in range(1,len(train_folds)):
         cur_train_online_folds = train_folds[:train_fold_idx]
         cur_eval_online_folds = train_folds[train_fold_idx]
@@ -40,9 +42,12 @@ def get_train_test_subsets(dataset_obj, datadict, train_folds = UC.TRAIN_FOLDS, 
                     'train_subset': train_online_subset,
                     'eval_subset': eval_online_subset
                     }
+        if train_fold_idx == 1:
+            t1log2k = train_online_num_idxs * np.log2(num_classes) 
         online_folds.append(cur_dict)
 
     idx_dict['online_folds'] = online_folds
+    idx_dict['t1log2k'] = t1log2k
     idx_dict['full_train_idxs'] = temp_df.filter(pl.col(fold_col).is_in(train_folds))['idxs'].to_numpy()
     idx_dict['full_train_folds'] = train_folds
     idx_dict['full_train_size'] = idx_dict['full_train_idxs'].shape[0]

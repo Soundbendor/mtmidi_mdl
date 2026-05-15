@@ -1,5 +1,9 @@
 from pathlib import Path
 import os
+import numpy as np
+
+
+LOG2E = np.log2(np.exp(1.))
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ACTS_FOLDER = 'acts'

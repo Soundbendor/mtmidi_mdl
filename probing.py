@@ -143,11 +143,10 @@ def valid_test_model(model, scaler, generator, loss_fn, valid_subset, batch_size
 
 def run_expr(datadict, subsetdict, configdict, wandbdict, device='cpu'):
 
-    # suggested params
     
 
 
-        
+     
     # load pre-trained scaler
     scaler = None
 
@@ -155,7 +154,6 @@ def run_expr(datadict, subsetdict, configdict, wandbdict, device='cpu'):
         scaler = StandardScaler(with_mean = True, with_std = True, use_64bit = configdict['is_64bit'], dim=configdict['model_dim'], use_constant_feature_mask = configdict['standard_scaler_constant_feature_mask'], device = device)
 
     # init model
-    model = MLPProbe(in_dim =configdict['model_dim'], out_dim = datadict['num_classes'], hidden_dims = configdict['probe_hidden_dims'])
     # init rng
     torch_gen = torch.Generator(device=device)
     torch_gen.manual_seed(configdict['torch_seed'])
@@ -164,8 +162,6 @@ def run_expr(datadict, subsetdict, configdict, wandbdict, device='cpu'):
     opt_fn = None
     opt_fn = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-    plateau_sched = torch.optim.lr_scheduler.ReduceLROnPlateau(opt_fn, patience=UC.SCHED_PATIENCE)
-    warmup_sched = torch.optim.lr_scheduler.LinearLR(opt_fn, start_factor=UC.WARMUP_FACTOR, end_factor=1.0, total_iters=UC.WARMUP_BATCH_COUNT, last_epoch=-1)
     train_loss = None
     valid_loss = None
     if datadict['is_classification'] == True:
@@ -175,8 +171,6 @@ def run_expr(datadict, subsetdict, configdict, wandbdict, device='cpu'):
         else:
             train_loss = nn.CrossEntropyLoss(reduction='mean')
             valid_loss = nn.CrossEntropyLoss(reduction='sum')
-            #train_loss = nn.CrossEntropyLoss(reduction='mean', weight = torch.from_numpy(subsetdict['weights']).to(device=device, dtype=(torch.float32 if configdict['is_64bit'] == False else torch.float64)))
-            #valid_loss = nn.CrossEntropyLoss(reduction='sum', weight = torch.from_numpy(subsetdict['weights']).to(device=device, dtype=(torch.float32 if configdict['is_64bit'] == False else torch.float64)))
     else:
         train_loss = nn.MSELoss(reduction='mean')
         valid_loss = nn.MSELoss(reduction='sum')
@@ -192,7 +186,6 @@ def run_expr(datadict, subsetdict, configdict, wandbdict, device='cpu'):
     ret_loss = float('inf')
     accum_metrics = []
     best_model_dict = None
-    best_scaler_dict = None
     actual_training_epochs = None
     
     # wandbstuff
@@ -205,51 +198,49 @@ def run_expr(datadict, subsetdict, configdict, wandbdict, device='cpu'):
         cur_run = UW.init(wandbdict, {'id': run_name, 'name': short_name})
         UW.add_to_summary(cur_run, param_dict)
     # now for the actual train/valid loops
-    for epoch_idx in range(configdict['num_epochs']):
-        # train/valid
-        train_avg_loss, cur_batch_count = train_model(model, scaler, torch_gen, opt_fn, train_loss, subsetdict['train_subset'], warmup_sched, batch_size=batch_size, global_batch_count = cur_batch_count, warmup_batch_count = UC.WARMUP_BATCH_COUNT, shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
-        total_loss, valid_truths, valid_preds = valid_test_model(model, scaler, torch_gen, valid_loss, subsetdict['valid_subset'], batch_size=batch_size, shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
-        if cur_batch_count > UC.WARMUP_BATCH_COUNT:
-            plateau_sched.step(total_loss)
-        # get validation metrics
-        valid_metrics = UME.get_metrics(valid_truths, valid_preds, total_loss, layer_idx, trial_number, datadict, subsetdict, configdict, save_to_csv = False, make_cm = False)
-        accum_metrics.append(valid_metrics)
-        cur_score = UME.get_optimization_metric(valid_metrics, datadict)
+    for cur_fold in  datadict['online_folds']:
+        model = MLPProbe(in_dim =configdict['model_dim'], out_dim = datadict['num_classes'], hidden_dims = configdict['probe_hidden_dims'])
+        for epoch_idx in range(configdict['num_epochs']):
+            # train/valid
+            train_avg_loss, cur_batch_count = train_model(model, scaler, torch_gen, opt_fn, train_loss, cur_fold['train_subset'], warmup_sched, batch_size=batch_size, global_batch_count = cur_batch_count, warmup_batch_count = UC.WARMUP_BATCH_COUNT, shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
+            total_loss, valid_truths, valid_preds = valid_test_model(model, scaler, torch_gen, valid_loss, subsetdict['valid_subset'], batch_size=batch_size, shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
+            # get validation metrics
+            valid_metrics = UME.get_metrics(valid_truths, valid_preds, total_loss, layer_idx, trial_number, datadict, subsetdict, configdict, save_to_csv = False, make_cm = False)
+            accum_metrics.append(valid_metrics)
+            cur_score = UME.get_optimization_metric(valid_metrics, datadict)
 
-        # early stopping
-        if using_early_stopping == False:
-            ret_score = cur_score
-            ret_loss = total_loss
-        else:
-            if epoch_idx % configdict['early_stopping_check_interval'] == 0:
-                if cur_score > best_score:
-                    best_score = cur_score
-                    best_loss = total_loss
-                    boredom = 0
+            # early stopping
+            if using_early_stopping == False:
+                ret_score = cur_score
+                ret_loss = total_loss
+            else:
+                if epoch_idx % configdict['early_stopping_check_interval'] == 0:
+                    if cur_score > best_score:
+                        best_score = cur_score
+                        best_loss = total_loss
+                        boredom = 0
+                        best_model_dict = copy.deepcopy(model.state_dict())
+                        if scaler != None:
+                            best_scaler_dict = copy.deepcopy(scaler.state_dict())
+                    else:
+                        boredom += 1
+                if boredom >= configdict['early_stopping_boredom']:
+                    actual_training_epochs = epoch_idx + 1
+                    ret_score = best_score
+                    ret_loss = best_loss
+                    break
+                elif epoch_idx == (configdict['num_epochs'] - 1):
+                    # end of training, just report what you have
+                    actual_training_epochs = epoch_idx + 1
                     best_model_dict = copy.deepcopy(model.state_dict())
                     if scaler != None:
                         best_scaler_dict = copy.deepcopy(scaler.state_dict())
-                else:
-                    boredom += 1
-            if boredom >= configdict['early_stopping_boredom']:
-                actual_training_epochs = epoch_idx + 1
-                ret_score = best_score
-                ret_loss = best_loss
-                break
-            elif epoch_idx == (configdict['num_epochs'] - 1):
-                # end of training, just report what you have
-                actual_training_epochs = epoch_idx + 1
-                best_model_dict = copy.deepcopy(model.state_dict())
-                if scaler != None:
-                    best_scaler_dict = copy.deepcopy(scaler.state_dict())
-                ret_score = cur_score
-                ret_loss = total_loss
+                    ret_score = cur_score
+                    ret_loss = total_loss
 
     # model saving
     if best_model_dict != None:
         UP.save_model_dict(best_model_dict, configdict, layer_idx, trial_number)
-    if best_scaler_dict != None:
-        UP.save_scaler_dict(best_scaler_dict, configdict, layer_idx, trial_number)
     # bookkeeping
     trial.set_user_attr(key='actual_training_epochs', value=actual_training_epochs)
     trial.set_user_attr(key='valid_loss', value=ret_loss)
