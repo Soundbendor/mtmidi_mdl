@@ -177,7 +177,7 @@ def run_expr(datadict, subsetdict, configdict, wandbdict, device='cpu'):
 
     # other init
     using_early_stopping =  configdict['early_stopping_check_interval'] > 0
-    boredom = 0
+    patience = 0
     cur_batch_count = 0
         
     best_score = float('-inf')
@@ -197,6 +197,7 @@ def run_expr(datadict, subsetdict, configdict, wandbdict, device='cpu'):
         run_name, short_name = UO.get_run_and_short_names(configdict, layer_idx, param_dict) 
         cur_run = UW.init(wandbdict, {'id': run_name, 'name': short_name})
         UW.add_to_summary(cur_run, param_dict)
+
     # now for the actual train/valid loops
     for cur_fold in  datadict['online_folds']:
         model = MLPProbe(in_dim =configdict['model_dim'], out_dim = datadict['num_classes'], hidden_dims = configdict['probe_hidden_dims'])
@@ -218,13 +219,13 @@ def run_expr(datadict, subsetdict, configdict, wandbdict, device='cpu'):
                     if cur_score > best_score:
                         best_score = cur_score
                         best_loss = total_loss
-                        boredom = 0
+                        patience = 0
                         best_model_dict = copy.deepcopy(model.state_dict())
                         if scaler != None:
                             best_scaler_dict = copy.deepcopy(scaler.state_dict())
                     else:
-                        boredom += 1
-                if boredom >= configdict['early_stopping_boredom']:
+                        patience += 1
+                if patience >= configdict['early_stopping_patience']:
                     actual_training_epochs = epoch_idx + 1
                     ret_score = best_score
                     ret_loss = best_loss

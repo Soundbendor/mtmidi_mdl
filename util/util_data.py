@@ -23,6 +23,40 @@ def get_df(dataset):
     cur_data = pl.read_csv(csvpath)
     return cur_data
 
+
+
+def get_dataset_proportions(dataset_size, num_steps = UC.PREQ_STEPS, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBPCT):
+    powers_of_two = np.power(2, np.arange(1,num_steps+1))
+    train_prop = powers_of_two/np.max(powers_of_two)
+    actual_prop = train_pct * train_prop
+    test_prop = (1. - train_pct) * test_subpct
+    dev_prop = (1. - train_pct) * (1. - test_subpct)
+    ret = {'prop': {'prequential': {'train': train_prop, 'actual': actual_prop},
+                    'train': train_pct,
+                    'test': test_prop,
+                    'dev': dev_prop},
+           'actual': {'prequential': dataset_size * actual_prop,
+                      'train': dataset_size * train_pct,
+                      'test': dataset_size * test_prop,
+                      'dev': dataset_size * dev_prop}
+           }
+    return ret
+
+def check_dataset_proportions(dataset_size, num_classes, num_steps = UC.PREQ_STEPS, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBPCT, num_class_thresh = UC.NUM_CLASS_THRESH):
+    prop_dict = get_dataset_proportions(dataset_size, num_steps = num_steps, train_pct = train_pct, test_subpct = test_subpct)
+    breaks_on = []
+    for split in ['prequential', 'train', 'test', 'dev']:
+        split_amt = prop_dict['actual'][split]
+        cur_size = None
+        if split == 'prequential':
+            cur_size = split_amt.min()
+        else:
+            cur_size = split_amt
+        if cur_size/num_classes < num_class_thresh:
+            breaks_on.append(split)
+    return {'below_class_thresh': breaks_on, 'props': prop_dict}
+
+
 # classdict: go from classes to indices
 # idxdict: go from indices to classes
 def load_data_dict(dataset):
@@ -112,6 +146,7 @@ def load_data_dict(dataset):
 
     #label_arr = cur_df.select([label]).to_numpy().flatten()
 
+    check_class_props = check_dataset_proportions(num_examples, num_classes, num_steps = UC.PREQ_STEPS, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBPCT, num_class_thresh = UC.NUM_CLASS_THRESH)
     ret = {
             'dataset': dataset,
             'num_classes': num_classes,
@@ -123,7 +158,8 @@ def load_data_dict(dataset):
             'label': label,
             'label_arr': label_arr,
             'is_balanced': is_balanced,
-            'train_on_middle': train_on_middle
+            'train_on_middle': train_on_middle,
+            'below_class_thresh': check_class_props['below_class_thresh']
             }
     return ret
 

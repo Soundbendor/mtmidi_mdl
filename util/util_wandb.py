@@ -52,16 +52,16 @@ def build_config(parser_args, datadict, subsetdict):
     if parser_args.expr_type == 'mlp':
         _config['probe_hidden_dims'] = []
         _config['early_stopping_check_interval'] = UC.EARLY_STOPPING_CHECK_INTERVAL
-        _config['early_stopping_boredom'] = UC.EARLY_STOPPING_BOREDOM
+        _config['early_stopping_patience'] = UC.EARLY_STOPPING_patience
     elif parser_args.expr_type == 'linear':
         _config['probe_hidden_dims'] = []
         _config['early_stopping_check_interval'] = UC.EARLY_STOPPING_CHECK_INTERVAL
-        _config['early_stopping_boredom'] = UC.EARLY_STOPPING_BOREDOM
+        _config['early_stopping_patience'] = UC.EARLY_STOPPING_patience
 
     elif parser_args.expr_type == 'mlp_2l':
         _config['probe_hidden_dims'] = UC.MLPPROBE_HIDDEN_DIMS
         _config['early_stopping_check_interval'] = UC.EARLY_STOPPING_CHECK_INTERVAL
-        _config['early_stopping_boredom'] = UC.EARLY_STOPPING_BOREDOM
+        _config['early_stopping_patience'] = UC.EARLY_STOPPING_patience
 
     _config['train_folds'] = subsetdict['train_folds']
     _config['valid_folds'] = subsetdict['valid_folds']
