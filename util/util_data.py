@@ -17,6 +17,7 @@ from data_helpers import scales as SCL
 from data_helpers import intervals as IVL
 from data_helpers import simple_progressions as SPG
 
+from sklearn.model_selection import train_test_split
 def get_df(dataset):
     fname = f'{dataset}-metadata.csv'
     csvpath = os.path.join(UMN.by_projpath('csv', make_dir = False), fname)
@@ -24,9 +25,30 @@ def get_df(dataset):
     return cur_data
 
 
+def create_splits(datadict, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBPCT, seed = 39):
+    idxs = np.arange(datadict'[num_examples'])
+    label = datadict['label']
+    labels = datadict['df'][label].to_numpy()
+    preq_idxs_all, testvalid_idxs = train_test_split(idxs, train_size = train_pct, random_state = seed, shuffle = True, stratify = labels)
+    test_idxs, valid_idxs = train_test_split(testvalid_idxs, train_size = test_subpct, random_state = seed, shuffle = True, stratify = labels[testvalid_idxs])
+    preq_idxs = []
+    prev_idxs = preq_idxs_all
+    for i in range(UC.DATASET_PREQ_STEPS[datadict['dataset']]):
+        train_idxs, encode_idxs = train_test_split(prev_idxs, train_size = 0.5, random_state = seed, shuffle = True, stratify = labels[prev_idxs])
+        preq_idxs.append(encode_idxs)
+        prev_idxs = train_idxs
+        if i == num_steps - 1:
+            preq_idxs.append(train_idxs)
+    return {'preq': preq_idxs[::-1], 'valid': valid_idxs, 'test': test_idxs}
 
-def get_dataset_proportions(dataset_size, num_steps = UC.PREQ_STEPS, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBPCT):
-    powers_of_two = np.power(2, np.arange(1,num_steps+1))
+
+
+
+
+
+
+def get_dataset_proportions(dataset_size, num_steps = 7, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBPCT):
+    powers_of_two = np.power(2, np.arange(1,num_steps+2))
     train_prop = powers_of_two/np.max(powers_of_two)
     actual_prop = train_pct * train_prop
     test_prop = (1. - train_pct) * test_subpct
@@ -146,7 +168,6 @@ def load_data_dict(dataset):
 
     #label_arr = cur_df.select([label]).to_numpy().flatten()
 
-    check_class_props = check_dataset_proportions(num_examples, num_classes, num_steps = UC.PREQ_STEPS, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBPCT, num_class_thresh = UC.NUM_CLASS_THRESH)
     ret = {
             'dataset': dataset,
             'num_classes': num_classes,

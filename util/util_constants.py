@@ -143,6 +143,22 @@ MODEL_PPRINT = {'baseline-concat': "Concat.",
                  'wav2vec2-large': "Wav2Vec2-large"
                  }
 
+# at least 10 samples per step
+DATASET_PREQ_STEPS = {"polyrhythms": 7
+                      "dynamics": 7,
+                      "seventh_chords": 7,
+                      "mode_mixture": 7,
+                      "secondary_dominants": 7,
+                      "tempos": -1,
+                      "time_signatures": 5,
+                      "chords": 7,
+                      "notes": 6,
+                      "scales": 7,
+                      "intervals": 7,
+                      "simple_progressions": 7
+                 }
+
+
 #datasets that are regression
 REG_DATASETS = set(['tempos'])
 # datasets to train on middle on
