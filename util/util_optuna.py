@@ -4,7 +4,7 @@ import optuna
 from . import util_main as UMN
 from . import util_constants as UC
 
-search_space = {'learning_rate_exp': [-4] }
+search_space = {}
 
 def study_callback(study, trial):
     study_sampler_path = study.user_attrs['sampler_filepath']

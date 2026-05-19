@@ -10,7 +10,7 @@ import torch, torch.utils.data as TUD
 from sklearn.model_selection import train_test_split
 
 
-def create_splits(datadict, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBPCT, seed = 39):
+def get_split_idxs(datadict, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBPCT, seed = 39):
     idxs = np.arange(datadict'[num_examples'])
     label = datadict['label']
     labels = datadict['df'][label].to_numpy()
@@ -18,7 +18,9 @@ def create_splits(datadict, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBP
     test_idxs, valid_idxs = train_test_split(testvalid_idxs, train_size = test_subpct, random_state = seed, shuffle = True, stratify = labels[testvalid_idxs])
     _preq_idxs = []
     prev_idxs = preq_all_idxs
-    for i in range(UC.DATASET_PREQ_STEPS[datadict['dataset']]):
+
+    num_steps = UC.DATASET_PREQ_STEPS[datadict['dataset']]
+    for i in range(num_steps):
         train_idxs, encode_idxs = train_test_split(prev_idxs, train_size = 0.5, random_state = seed, shuffle = True, stratify = labels[prev_idxs])
         _preq_idxs.append(encode_idxs)
         prev_idxs = train_idxs
@@ -34,7 +36,10 @@ def create_splits(datadict, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBP
     ret ={'preq_idxs': preq_idxs, 'preq_size': preq_size,
           'valid_idxs': valid_idxs, 'valid_size': valid_size,
           'test_idxs': test_idxs, 'test_size': test_size,
-          'preq_all_idxs': preq_idxs_all, 'preq_all_idxs_size': preq_all_idxs_size
+          'preq_all_idxs': preq_idxs_all, 'preq_all_idxs_size': preq_all_idxs_size,
+          'num_preq_steps': num_steps,
+          'train_pct': train_pct,
+          'test_subpct': test_subpct
           }
     return ret
 
@@ -63,9 +68,12 @@ def create_subsets_from_splits(dataset_obj, idx_dict):
             ret[idx_str] = idx_dict[idx_str]
             ret[size_str] = idx_dict[size_str]
             ret[subset_str] = TUD.Subset(dataset_obj, ret[idx_str])
+    ret['num_preq_steps'] = idx_dict['num_preq_steps']
+    ret['train_pct'] = idx_dict['train_pct']
+    ret['test_subpct'] = idx_dict['test_subpct']
     return ret
 
-def create_subsets(dataset_obj, datadict, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBPCT, seed = 39)
+def create_subsets(dataset_obj, datadict, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBPCT, seed = 39):
     idxdict = create_splits(datadict, train_pct = train_pct, test_subpct = test_subpct, seed = seed)
     subsetdict = create_subsets_from_splits(dataset_obj, idxdict)
     return subsetdict
@@ -113,30 +121,6 @@ def accumulate_truths_preds(truths, truths_to_add, preds, preds_to_add, batch_id
         else:
             return np.hstack((copy.deepcopy(truths),new_truths)), np.hstack((copy.deepcopy(preds), new_preds))
 
-def save_scaler_dict(scaler, configdict, layer_idx):
-    suffix = configdict['suffix']
-    other_str = f'l{layer_idx}'
-
-    cur_type = None
-    if configdict['is_64bit'] == True:
-        cur_type = 'scaler64'
-    else:
-        cur_type = 'scaler32'
-    save_path = UMN.get_save_path(cur_type, configdict, other=other_str, make_dir = True)
-    torch.save(scaler, save_path)
-
-def load_scaler_dict(scaler, configdict, layer_idx, device='cpu'):
-    other_str = f'l{layer_idx}'
-
-    cur_type = None
-    if configdict['is_64bit'] == True:
-        cur_type = 'scaler64'
-    else:
-        cur_type = 'scaler32'
-    save_path = UMN.get_save_path(cur_type, configdict, other=other_str, make_dir = False)
-
-    scaler.load_state_dict(torch.load(save_path, map_location=device, weights_only = False))
-
 def save_model_dict(model_dict, configdict, layer_idx, trial_number):
     suffix = configdict['suffix']
     layer_str = f'l{layer_idx}'
@@ -155,22 +139,14 @@ def load_model_dict(model, configdict, layer_idx, trial_number, device='cpu'):
 
 def save_mean(cur_mean, configdict, layer_idx, is_train = True):
     suffix = configdict['suffix']
-    split_str = 'nil'
-    if is_train == True:
-        split_str = 'train'
-    else:
-        split_str = 'test'
+    split_str = 'train'
     layer_str = f'l{layer_idx}'
     other_str = f'{layer_str}_{split_str}-mean'
     save_path = UMN.get_save_path('mean', configdict, other=other_str, make_dir = True)
     np.save(save_path, cur_mean.cpu().numpy())
 
 def load_mean(configdict, layer_idx, is_train = True):
-    split_str = 'nil'
-    if is_train == True:
-        split_str = 'train'
-    else:
-        split_str = 'test'
+    split_str = 'train'
 
     layer_str = f'l{layer_idx}'
     other_str = f'{layer_str}_{split_str}-mean'
@@ -180,23 +156,14 @@ def load_mean(configdict, layer_idx, is_train = True):
 
 def save_std(cur_std, configdict, layer_idx, is_train = True):
     suffix = configdict['suffix']
-    split_str = 'nil'
-    if is_train == True:
-        split_str = 'train'
-    else:
-        split_str = 'test'
+    split_str = 'train'
     layer_str = f'l{layer_idx}'
     other_str = f'{layer_str}_{split_str}-std'
     save_path = UMN.get_save_path('std', configdict, other=other_str, make_dir = True)
     np.save(save_path, cur_std.cpu().numpy())
 
 def load_std(configdict, layer_idx, is_train = True):
-    split_str = 'nil'
-    if is_train == True:
-        split_str = 'train'
-    else:
-        split_str = 'test'
-
+    split_str = 'train'
     layer_str = f'l{layer_idx}'
     other_str = f'{layer_str}_{split_str}-std'
     save_path = UMN.get_save_path('std', configdict, other=other_str, make_dir = False)

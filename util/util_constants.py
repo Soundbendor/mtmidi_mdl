@@ -8,8 +8,6 @@ LOG2E = np.log2(np.exp(1.))
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ACTS_FOLDER = 'acts'
 SAMPLER_FOLDER = 'samplers'
-SCALERS_FOLDER = 'scalers'
-SCALERS_DOC_FOLDER = 'scalers_doc'
 CM_FOLDER = 'cm'
 RESULTS_FOLDER = 'res'
 RESULTS_TRAIN_FOLDER = 'res_train'
@@ -40,7 +38,6 @@ SPLIT_SEED = 39
 TRAIN_PCT = 0.7
 TEST_SUBPCT = 0.5
 OPT_DIRECTION = 'maximize'
-STANDARD_SCALER_CONSTANT_FEATURE_MASK = True
 
 MLPPROBE_HIDDEN_DIMS = [512]
 

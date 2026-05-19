@@ -127,25 +127,19 @@ def valid_test_model(model, scaler, generator, loss_fn, valid_subset, batch_size
 
     return total_loss, truths, preds
 
-def run_expr(datadict, subsetdict, configdict, wandbdict, device='cpu'):
+def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu'):
 
     
 
-
+    layer_idx = trial.suggest_categorical('layer_idx', list(range(configdict['model_num_layers'])))
      
-    # load pre-trained scaler
-    scaler = None
-
-    if data_norm == True:
-        scaler = StandardScaler(with_mean = True, with_std = True, use_64bit = configdict['is_64bit'], dim=configdict['model_dim'], use_constant_feature_mask = configdict['standard_scaler_constant_feature_mask'], device = device)
-
+   
     # init model
     # init rng
     torch_gen = torch.Generator(device=device)
     torch_gen.manual_seed(configdict['torch_seed'])
     # init opt/loss
 
-    opt_fn = None
     opt_fn = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     train_loss = None
@@ -249,7 +243,7 @@ if __name__ == "__main__":
     #### arg parsing
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-ds", "--dataset", type=str, default="polyrhythms", help="dataset")
-    parser.add_argument("-ms", "--model_size", type=str, default="musicgen-small", help="musicgen-small/musicgen-medium/musicgen-large/jukebox/baseline-chroma/baseline-concat/baseline-mel/baseline-mfcc")
+    parser.add_argument("-ms", "--model_size", type=str, default="musicgen-small", help="musicgen-small/musicgen-medium/musicgen-large/jukebox/MERT-v1-95M/MERT-v1-330M/wav2vec2-base/wav2vec2-large")
     parser.add_argument("-et", "--expr_type", type=str, default="mlp", help="experiment type")
     parser.add_argument("-wdb", "--use_wandb", type=strtobool, default=True, help="sync to wandb")
     parser.add_argument("-cd", "--use_cuda", type=strtobool, default=True, help="use cuda")
@@ -257,13 +251,12 @@ if __name__ == "__main__":
     parser.add_argument("-st", "--stats", type=strtobool, default=False, help="calculate stats")
     parser.add_argument("-eb", "--eval_best", type=strtobool, default=False, help="eval on the best trial per model")
     parser.add_argument("-pr", "--part_rto", type=strtobool, default=False, help="calculate participation ratio")
-    parser.add_argument("-en", "--eval_nll", type=strtobool, default=False, help="do eval on training dataset for nll comps")
     parser.add_argument("-rs", "--restart_study", type=strtobool, default=False, help="force restart of optuna study")
     parser.add_argument("-sh", "--from_share", type=strtobool, default=False, help="load from share partition")
     parser.add_argument("-sj", "--slurm_job", type=int, default=0, help="slurm job")
     parser.add_argument("-sf", "--suffix", type=int, default=1, help="suffix")
     parser.add_argument("-tsd", "--torch_seed", type=int, default=UC.SEED, help="torch random seed")
-    parser.add_argument("-ssd", "--split_seed", type=int, default=UC.SEED, help="seed for splitting")
+    parser.add_argument("-ssd", "--split_seed", type=int, default=UC.SPLIT_SEED, help="seed for splitting")
 
     args = parser.parse_args()
 
@@ -276,11 +269,11 @@ if __name__ == "__main__":
     torch.manual_seed(args.torch_seed)
     from_dir = ""
     if args.from_share == True:
-        from_dir = os.path.join(UC.SHARE_PATH, 'mtmidi_prb')
+        from_dir = os.path.join(UC.SHARE_PATH, 'mtmidi_mdl')
     datadict = UD.load_data_dict(args.dataset)
 
     cur_ds = ProbeDataset(datadict, args.model_size, layer_idx=0, from_dir = from_dir, to_torch = True, device = device)
-    subsetdict = UP.get_train_test_subsets(cur_ds, datadict, train_folds = UC.TRAIN_FOLDS, valid_folds =UC.VALID_FOLDS, test_folds = UC.TEST_FOLDS, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBPCT, seed = args.split_seed)
+    subsetdict = UP.get_preq_valid_test_subsets(cur_ds, datadict, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBPCT, seed = args.split_seed)
 
     # wandb stuff
     configdict = UW.build_config(args, datadict, subsetdict)
@@ -288,12 +281,12 @@ if __name__ == "__main__":
     if args.stats == True:
         torch_gen = torch.Generator(device=device)
         torch_gen.manual_seed(configdict['torch_seed'])
-        train_subset = subsetdict['train_subset']
+        train_subset = subsetdict['preq_all_subset']
+        train_size = subsetdict['preq_all_size']
         for layer_idx in range(configdict['model_num_layers']): 
-            subsetdict['pilot_train_subset'].dataset.set_layer_idx(layer_idx)
-            cur_pr, cur_mean, cur_std = calculate_participation_ratio(torch_gen, subsetdict['pilot_train_subset'], subsetdict['pilot_train_size'], configdict['model_dim'] , cur_mean = None, cur_std = None, shuffle = True, device=device)
+            train_subset.dataset.set_layer_idx(layer_idx)
+            cur_mean, cur_std = calculate_mean_stdev(torch_gen, train_subset, train_size, configdict['model_dim'] , shuffle = True, device=device)
             print(layer_idx, cur_pr, cur_mean, cur_std)
-            UP.save_part_rto(cur_pr, configdict, layer_idx, is_train = True)
             UP.save_mean(cur_mean, configdict, layer_idx, is_train = True)
             UP.save_std(cur_std, configdict, layer_idx, is_train = True)
     elif args.eval == False:

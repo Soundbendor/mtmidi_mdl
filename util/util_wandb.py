@@ -48,48 +48,26 @@ def build_config(parser_args, datadict, subsetdict):
     _config['model_dim'] = model_shape[1]
     _config['model_num_layers'] = model_shape[0]
     _config['dataloader_shuffle'] = UC.DATALOADER_SHUFFLE
-    _config['standard_scaler_constant_feature_mask'] = UC.STANDARD_SCALER_CONSTANT_FEATURE_MASK
     if parser_args.expr_type == 'mlp':
-        _config['probe_hidden_dims'] = []
-        _config['early_stopping_check_interval'] = UC.EARLY_STOPPING_CHECK_INTERVAL
-        _config['early_stopping_patience'] = UC.EARLY_STOPPING_patience
+        _config['probe_hidden_dims'] = UC.MLPPROBE_HIDDEN_DIMS
     elif parser_args.expr_type == 'linear':
         _config['probe_hidden_dims'] = []
-        _config['early_stopping_check_interval'] = UC.EARLY_STOPPING_CHECK_INTERVAL
-        _config['early_stopping_patience'] = UC.EARLY_STOPPING_patience
+    _config['early_stopping_check_interval'] = UC.EARLY_STOPPING_CHECK_INTERVAL
+    _config['early_stopping_patience'] = UC.EARLY_STOPPING_PATIENCE
 
-    elif parser_args.expr_type == 'mlp_2l':
-        _config['probe_hidden_dims'] = UC.MLPPROBE_HIDDEN_DIMS
-        _config['early_stopping_check_interval'] = UC.EARLY_STOPPING_CHECK_INTERVAL
-        _config['early_stopping_patience'] = UC.EARLY_STOPPING_patience
+    _config['num_preq_steps'] = subsetdict['num_preq_steps']
+    _config['train_pct'] = subsetdict['train_pct']
+    _config['test_subpct'] = subsetdict['test_subpct']
 
-    _config['train_folds'] = subsetdict['train_folds']
-    _config['valid_folds'] = subsetdict['valid_folds']
-    _config['test_folds'] = subsetdict['test_folds']
     _config['is_balanced'] = datadict['is_balanced']
     _config['use_weights'] = subsetdict['weights'].shape[0] > 0
     return _config
 
 
 def build_initdict(parser_args, _config):
-    _d = {'entity': entity, 'project': f'mtmidi_prb-{parser_args.expr_type}', 'dir': UC.WANDB_PATH, 'settings': wandb.Settings(init_timeout=120)}
+    _d = {'entity': entity, 'project': f'mtmidi_mdl-{parser_args.expr_type}', 'dir': UC.WANDB_PATH, 'settings': wandb.Settings(init_timeout=120)}
     _d['config'] = _config
     return _d
-
-def log_scaler_batch_mean_var(cur_run, scalerdict):
-    means = scalerdict['mean_vecs_batch'].detach().cpu().numpy().T
-    variances = scalerdict['var_vecs_batch'].detach().cpu().numpy().T 
-    fig, axes = plt.subplots(2, 1, figsize=(12, 6))
-    for ax, data, title in zip(axes, [means, variances], ["Running Mean", "Running Variance"]):
-        im = ax.imshow(data, cmap="coolwarm", aspect="auto")
-        ax.set_title(title)
-        ax.set_xticks([])
-        ax.set_yticks([])
-        fig.colorbar(im, ax=ax)
-    
-    fig.tight_layout()
-    cur_run.log({"standardscaler_means_vars": wandb.Image(fig)})
-    plt.close(fig)
 
 def finish_run(cur_run):
     cur_run.finish()
