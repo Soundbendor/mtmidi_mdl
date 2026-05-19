@@ -39,77 +39,56 @@ def create_splits(datadict, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBP
     return ret
 
 
-def create_subsets(dataset_obj, idx_dict):
+def create_subsets_from_splits(dataset_obj, idx_dict):
+    ret = {}
     for idx_type in ['preq', 'valid', 'test', 'preq_all']:
         idx_str = f'{idx_type}_idxs'
         subset_str = f'{idx_type}_subset'
+        size_str = f'{idx_type}_size'
         if idx_type == 'preq':
+            ret['preq'] = []
             for i in range(1,len(idx_dict[idx_str])):
-                train_subset = 
+                cur = {}
+                if i == 1:
+                    cur['train_idxs'] = idx_dict[idx_str][0]
+                else:
+                    cur['train_idxs'] = np.hstack(idx_dict[idx_str[:i]])
+                cur['train_size'] = cur['train_idxs'].shape[0]
+                cur['encode_idxs'] = idx_dict[idx_str][i]
+                cur['encode_size'] = cur['encode_idxs'].shape[0]
+                cur['train_subset'] = TUD.Subset(dataset_obj, cur['train_idxs'])
+                cur['encode_subset'] = TUD.Subset(dataset_obj, cur['encode_idxs'])
+                ret['preq'].append(cur)
+        else:
+            ret[idx_str] = idx_dict[idx_str]
+            ret[size_str] = idx_dict[size_str]
+            ret[subset_str] = TUD.Subset(dataset_obj, ret[idx_str])
+    return ret
+
+def create_subsets(dataset_obj, datadict, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBPCT, seed = 39)
+    idxdict = create_splits(datadict, train_pct = train_pct, test_subpct = test_subpct, seed = seed)
+    subsetdict = create_subsets_from_splits(dataset_obj, idxdict)
+    return subsetdict
+                
 
 
-def get_train_test_subsets(dataset_obj, datadict, train_folds = UC.TRAIN_FOLDS, test_folds = UC.TEST_FOLDS):
-    idx_dict = {}
-    fold_col = 'fold'
+
+def get_preq_valid_test_subsets(dataset_obj, datadict, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBPCT, seed = UC.SPLIT_SEED):
     # default to given folds
     num_examples = datadict['num_examples']
     num_classes = datadict['num_classes'] 
-    _idxs = np.arange(num_examples)
-    temp_df = pl.DataFrame({fold_col: datadict['df'][fold_col], 'idxs': _idxs})
-    online_folds = []
-    t1log2k = None
-    for train_fold_idx in range(1,len(train_folds)):
-        cur_train_online_folds = train_folds[:train_fold_idx]
-        cur_eval_online_folds = train_folds[train_fold_idx]
-        train_online_idxs = temp_df.filter(pl.col(fold_col).is_in(cur_train_online_folds))['idxs'].to_numpy()
-        eval_online_idxs = temp_df.filter(pl.col(fold_col).is_in(cur_eval_online_folds))['idxs'].to_numpy()
-        train_online_num_folds = len(cur_train_online_folds)
-        eval_online_num_folds = len(cur_eval_online_folds)
-        train_online_num_idxs = cur_train_online_idxs.shape[0]
-        eval_online_num_idxs = cur_eval_online_idxs.shape[0]
-        train_online_subset = TUD.Subset(dataset_obj, train_online_idxs)
-        eval_online_subset = TUD.Subset(dataset_obj, eval_online_idxs)
-        cur_dict = {'train_idxs': train_online_idxs,
-                    'eval_idxs': eval_online_idxs,
-                    'train_num_folds': train_online_num_folds,
-                    'eval_num_folds': eval_online_num_folds,
-                    'train_num_idxs': train_online_num_idxs,
-                    'eval_num_idxs': eval_online_num_idxs,
-                    'train_subset': train_online_subset,
-                    'eval_subset': eval_online_subset
-                    }
-        if train_fold_idx == 1:
-            t1log2k = train_online_num_idxs * np.log2(num_classes) 
-        online_folds.append(cur_dict)
-
-    idx_dict['online_folds'] = online_folds
-    idx_dict['t1log2k'] = t1log2k
-    idx_dict['full_train_idxs'] = temp_df.filter(pl.col(fold_col).is_in(train_folds))['idxs'].to_numpy()
-    idx_dict['full_train_folds'] = train_folds
-    idx_dict['full_train_size'] = idx_dict['full_train_idxs'].shape[0]
-    idx_dict['test_idxs'] = temp_df.filter(pl.col(fold_col).is_in(test_folds))['idxs'].to_numpy()
-    idx_dict['test_size'] = idx_dict['test_idxs'].shape[0]
-    idx_dict['test_folds'] = test_folds
+    subsetdict = create_subsets(dataset_obj, datadict, train_pct = train_pct, test_subpct = test_subpct, seed = seed)
+    ret_dict = {k:v for (k,v) in subsetdict.items()}
+    ret_dict['t1logk'] = subsetdict['preq'][0]['size'] * np.log2(num_classes)
     if datadict['is_balanced'] == False:
         cur_label = datadict['label']
-        train_df = datadict['df'][idx_dict['full_train_idxs']]
+        train_df = datadict['df'][subsetdict['preq_all_idxs']]
         class_amounts = {k:v[0] for (k,v) in train_df[cur_label].value_counts().rows_by_key(cur_label).items()}
         amount_arr = np.array([class_amounts[k] for k in datadict['label_arr']]).flatten()
         inv_class_prop = np.sum(amount_arr)/amount_arr
-        idx_dict['weights'] = inv_class_prop/np.max(inv_class_prop)
-    if idx_dict['full_train_idxs'].shape[0] > 0:
-        idx_dict['full_train_subset'] = TUD.Subset(dataset_obj, idx_dict['full_train_idxs'])
-    if idx_dict['test_idxs'].shape[0] > 0:
-        idx_dict['test_subset'] = TUD.Subset(dataset_obj, idx_dict['test_idxs'])
+        ret_dict['weights'] = inv_class_prop/np.max(inv_class_prop)
     return idx_dict
 
-
-# input torch, output torch
-def accumulate_vecs(cur_vecs, vec_to_add):
-    if cur_vecs == None:
-        return vec_to_add
-    else:
-        return torch.vstack((cur_vecs, vec_to_add))
 
 # input torch, output numpy
 # predictions are probability dists, convert to index
@@ -247,12 +226,4 @@ def load_part_rto(configdict, layer_idx, is_train = True):
     save_path = UMN.get_save_path('part_rto', configdict, other=other_str, make_dir = False)
     return np.load(save_path)
 
-def log_scaler_epoch_mean_var(run_name, scalerdict):
-    means = scalerdict['mean_vecs_epoch'].detach().cpu().numpy()
-    variances = scalerdict['var_vecs_epoch'].detach().cpu().numpy() 
-    scaler_path = UMN.by_projpath(UC.SCALERS_DOC_FOLDER, make_dir = True)
-    out_path_means = os.path.join(scaler_path, f'{run_name}-means.npy')
-    np.save(out_path_means, means, allow_pickle = True)
-    out_path_vars = os.path.join(scaler_path, f'{run_name}-vars.npy')
-    np.save(out_path_vars, variances, allow_pickle = True)
 

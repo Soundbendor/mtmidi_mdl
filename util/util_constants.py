@@ -36,6 +36,7 @@ TRAIN_FOLDS = list(range(1,18))
 TEST_FOLDS = list(range(18,21))
 IS_64BIT = False
 SEED = 39
+SPLIT_SEED = 39
 TRAIN_PCT = 0.7
 TEST_SUBPCT = 0.5
 OPT_DIRECTION = 'maximize'
