@@ -10,6 +10,43 @@ import torch, torch.utils.data as TUD
 from sklearn.model_selection import train_test_split
 
 
+def create_splits(datadict, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBPCT, seed = 39):
+    idxs = np.arange(datadict'[num_examples'])
+    label = datadict['label']
+    labels = datadict['df'][label].to_numpy()
+    preq_all_idxs, testvalid_idxs = train_test_split(idxs, train_size = train_pct, random_state = seed, shuffle = True, stratify = labels)
+    test_idxs, valid_idxs = train_test_split(testvalid_idxs, train_size = test_subpct, random_state = seed, shuffle = True, stratify = labels[testvalid_idxs])
+    _preq_idxs = []
+    prev_idxs = preq_all_idxs
+    for i in range(UC.DATASET_PREQ_STEPS[datadict['dataset']]):
+        train_idxs, encode_idxs = train_test_split(prev_idxs, train_size = 0.5, random_state = seed, shuffle = True, stratify = labels[prev_idxs])
+        _preq_idxs.append(encode_idxs)
+        prev_idxs = train_idxs
+        if i == num_steps - 1:
+            _preq_idxs.append(train_idxs)
+
+
+    preq_all_idxs_size = preq_idxs_all.shape[0]
+    preq_idxs = _preq_idxs[::-1] 
+    preq_size = [x.shape[0] for x in preq_idxs]
+    valid_size = valid_idxs.shape[0]
+    test_size = test_idxs.shape[0]
+    ret ={'preq_idxs': preq_idxs, 'preq_size': preq_size,
+          'valid_idxs': valid_idxs, 'valid_size': valid_size,
+          'test_idxs': test_idxs, 'test_size': test_size,
+          'preq_all_idxs': preq_idxs_all, 'preq_all_idxs_size': preq_all_idxs_size
+          }
+    return ret
+
+
+def create_subsets(dataset_obj, idx_dict):
+    for idx_type in ['preq', 'valid', 'test', 'preq_all']:
+        idx_str = f'{idx_type}_idxs'
+        subset_str = f'{idx_type}_subset'
+        if idx_type == 'preq':
+            for i in range(1,len(idx_dict[idx_str])):
+                train_subset = 
+
 
 def get_train_test_subsets(dataset_obj, datadict, train_folds = UC.TRAIN_FOLDS, test_folds = UC.TEST_FOLDS):
     idx_dict = {}

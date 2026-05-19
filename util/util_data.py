@@ -25,23 +25,6 @@ def get_df(dataset):
     return cur_data
 
 
-def create_splits(datadict, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBPCT, seed = 39):
-    idxs = np.arange(datadict'[num_examples'])
-    label = datadict['label']
-    labels = datadict['df'][label].to_numpy()
-    preq_idxs_all, testvalid_idxs = train_test_split(idxs, train_size = train_pct, random_state = seed, shuffle = True, stratify = labels)
-    test_idxs, valid_idxs = train_test_split(testvalid_idxs, train_size = test_subpct, random_state = seed, shuffle = True, stratify = labels[testvalid_idxs])
-    preq_idxs = []
-    prev_idxs = preq_idxs_all
-    for i in range(UC.DATASET_PREQ_STEPS[datadict['dataset']]):
-        train_idxs, encode_idxs = train_test_split(prev_idxs, train_size = 0.5, random_state = seed, shuffle = True, stratify = labels[prev_idxs])
-        preq_idxs.append(encode_idxs)
-        prev_idxs = train_idxs
-        if i == num_steps - 1:
-            preq_idxs.append(train_idxs)
-    return {'preq': preq_idxs[::-1], 'valid': valid_idxs, 'test': test_idxs}
-
-
 
 
 

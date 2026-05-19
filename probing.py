@@ -19,10 +19,9 @@ from functools import partial
 from distutils.util import strtobool
 import os, sys, time, argparse, copy
 
-def calculate_participation_ratio(generator, train_subset, train_size, emb_dim, cur_mean = None, cur_std = None, shuffle = True, device='cpu'):
+def calculate_mean_stdev(generator, train_subset, train_size, emb_dim, shuffle = True, device='cpu'):
     train_dl = TUD.DataLoader(train_subset, batch_size = train_size, shuffle=shuffle, generator=generator)
     
-    part_rto = torch.tensor(-1.)
     _mean = None
     _std = None
 
@@ -34,26 +33,13 @@ def calculate_participation_ratio(generator, train_subset, train_size, emb_dim, 
             if _ipt.shape[0] != train_size:
                 print(f'did not load entire split of size {train_size}')
                 break
-            if cur_mean == None:
-                _mean = _ipt.mean(axis=0)
-            else:
-                _mean = cur_mean
-            if cur_std == None:
-                _std = _ipt.std(axis=0)
-            else:
-                _std = cur_std
-            ipt = (_ipt - _mean)/_std
-            cov = torch.cov(ipt.T)
-            if cov.shape[0] != emb_dim or cov.shape[1] != emb_dim or _mean.shape[0] != emb_dim or _std.shape[0] != emb_dim:
+            _mean = _ipt.mean(axis=0)
+            _std = _ipt.std(axis=0)
+            if _mean.shape[0] != emb_dim or _std.shape[0] != emb_dim:
+                _mean = None
+                _std = None
                 print(f'did not match emb_dim of size {emb_dim}')
-                break
-            else:
-                cur_shape = cov.shape
-                print(f'successfully formed cov of shape {cur_shape} for ({train_size},{emb_dim})')
-                tr_sq = torch.square(torch.diag(cov).sum())
-                sum_sq = torch.square(cov).sum()
-                part_rto = tr_sq/sum_sq
-    return part_rto, _mean, _std
+    return _mean, _std
 
 
 
