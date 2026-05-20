@@ -227,8 +227,7 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
 
     # wandb stuff
     if configdict['use_wandb'] == True:
-        UW.log_accum_metrics(cur_run, accum_metrics)
-        UW.add_to_summary(cur_run, {'online_mdl': online_mdl})
+        UW.log_array(cur_run, 'train_avg_nll', train_avg_nlls)
         UW.finish_run(cur_run)
     return online_mdl
 

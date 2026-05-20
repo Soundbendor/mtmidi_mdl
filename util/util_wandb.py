@@ -87,6 +87,10 @@ def add_to_summary(cur_run, add_dict):
     for (k,v) in add_dict.items():
         cur_run.summary[k] = v
 
+def log_array(cur_run, cur_key, cur_arr):
+    for i,v in enumerate(cur_arr):
+        cur_run.log({cur_key: cur_arr[i]}, step=i)
+
 def log_accum_metrics(cur_run, accum_metrics):
     for i,metricdict in enumerate(accum_metrics):
         cur_run.log(metricdict, step=i)

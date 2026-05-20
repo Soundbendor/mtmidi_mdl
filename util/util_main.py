@@ -198,9 +198,6 @@ def get_save_path(save_type, configdict, other=None, make_dir = True):
     elif save_type == 'scaler64':
         subfolder = UC.SCALERS_FOLDER
         ext = 'scaler64_dict'
-    elif save_type == 'scaler32':
-        subfolder = UC.SCALERS_FOLDER
-        ext = 'scaler32_dict'
 
     cur_path = by_projpath_multi(subpaths=[subfolder, dataset, expr_type],make_dir = make_dir)
     fname = None
