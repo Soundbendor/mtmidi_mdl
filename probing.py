@@ -216,9 +216,11 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
         test_loss, test_truths, test_preds = valid_test_model(model, cur_mean, cur_stdev, torch_gen, valid_loss, cur_test_subset, batch_size=batch_size, shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
         test_metrics = UME.get_metrics(test_truths, test_preds, nlls, layer_idx, trial_number, datadict, subsetdict, configdict, save_to_csv = True, make_cm = True)
 
+    online_mdl = test_metrics['online_mdl']
     # bookkeeping
     trial.set_user_attr(key='actual_training_epochs', value=actual_training_epochs)
     trial.set_user_attr(key='test_loss', value=test_loss)
+    trial.set_user_attr(key='online_mdl', value=online_mdl)
     # naming
     trial.set_user_attr(key='run_name', value=run_name)
     trial.set_user_attr(key='short_name', value=short_name)
@@ -226,9 +228,9 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
     # wandb stuff
     if configdict['use_wandb'] == True:
         UW.log_accum_metrics(cur_run, accum_metrics)
-        UW.add_to_summary(cur_run, {'returned_score': ret_score})
+        UW.add_to_summary(cur_run, {'online_mdl': online_mdl})
         UW.finish_run(cur_run)
-    return ret_score
+    return online_mdl
 
             
 
@@ -293,83 +295,4 @@ if __name__ == "__main__":
         objective = partial(_objective, datadict=datadict, subsetdict=subsetdict, configdict=configdict, wandbdict=wandbdict, device=device)
         callback_arr = [UO.study_callback]
         studydict['study'].optimize(objective, timeout = None, n_trials = None, n_jobs=1, gc_after_trial = True, callbacks=callback_arr)
-
-    elif args.part_rto == True or args.eval == True:
-        # EVALUATION ========== 
-
-        # load study and get best params given rdb
-        eval_params = []
-
-        cur_study = UO.create_or_load_study(args, seed=UC.SEED, evaluation = True)
-        if args.eval_best == True:
-            best_param_dict, best_trial_dict, attr_dict = UR.get_best_params_of_study(cur_study)
-            cur_params = UR.make_eval_param_dict(best_param_dict, best_trial_dict)
-            eval_params.append(cur_params)
-        else:
-            for layer_idx in range(configdict['model_num_layers']):
-                best_param_dict, best_trial_dict, attr_dict = UR.get_best_params_of_layer_idx(cur_study, layer_idx)
-                cur_params = UR.make_eval_param_dict(best_param_dict, best_trial_dict)
-                eval_params.append(cur_params)
-        for param_dict in eval_params:
-            layer_idx = param_dict['layer_idx']
-            trial_number = param_dict['trial_number']
-            batch_size = param_dict['batch_size']
-            data_norm = param_dict['data_norm']
-            
-            run_name = UO.get_run_name(configdict, layer_idx, is_short = False)
-
-            # some more init
-            # init rng
-            torch_gen = torch.Generator(device=device)
-            torch_gen.manual_seed(configdict['torch_seed'])
-
-            # set layer indices
-            subsetdict['train_subset'].dataset.set_layer_idx(layer_idx)
-            subsetdict['valid_subset'].dataset.set_layer_idx(layer_idx)
-            subsetdict['test_subset'].dataset.set_layer_idx(layer_idx)
-
-
-            test_subset = None
-            test_size = -1
-            if args.eval_nll == True:
-                test_subset = subsetdict['train_subset']
-                test_size = subsetdict['train_size']
-            else:
-                test_subset = subsetdict['test_subset']
-                test_size = subsetdict['test_size']
-
-            # init/load models
-            scaler = None
-            if data_norm == True:
-                scaler = StandardScaler(with_mean = True, with_std = True, use_64bit = configdict['is_64bit'], dim=configdict['model_dim'], use_constant_feature_mask = configdict['standard_scaler_constant_feature_mask'], device = device)
-                UP.load_scaler_dict(scaler, configdict, layer_idx, trial_number, device=device)
-                scaler.eval()
-            if args.part_rto == True:
-                cur_pr = calculate_participation_ratio(scaler, torch_gen, test_subset, test_size, configdict['model_dim'], shuffle = True, device=device)
-                if cur_pr <= 0.:
-                    print(f'calculation failed at layer {layer_idx}')
-                    break
-                else:
-                    print(f'saving pr ({cur_pr}, train: {args.eval_nll}) for {args.dataset} at layer {layer_idx}')
-                    UP.save_part_rto(cur_pr, configdict, layer_idx, trial_number)
-            elif args.eval == True:
-                model = MLPProbe(in_dim =configdict['model_dim'], out_dim = datadict['num_classes'],  hidden_dims = configdict['probe_hidden_dims'])
-
-                UP.load_model_dict(model, configdict, layer_idx, trial_number, device=device)
-
-                # get loss
-                test_loss = None
-                if datadict['is_classification'] == True:
-                    if datadict['is_balanced'] == True:
-                        test_loss = nn.CrossEntropyLoss(reduction='sum')
-                    else:
-                        test_loss = nn.CrossEntropyLoss(reduction='sum')
-                        #test_loss = nn.CrossEntropyLoss(reduction='sum', weight = torch.from_numpy(subsetdict['weights']).to(device=device, dtype=(torch.float32 if configdict['is_64bit'] == False else torch.float64)))
-                else:
-                    test_loss = nn.MSELoss(reduction='sum')
-
-                print(f'evaluating (train: {args.eval_nll}) for {args.dataset} at layer {layer_idx}')
-                test_total_loss, test_truths, test_preds = valid_test_model(model, scaler, torch_gen, test_loss, test_subset , batch_size=batch_size, shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
-                # get test metrics
-                test_metrics = UME.get_metrics(test_truths, test_preds, test_total_loss, layer_idx, trial_number, datadict, subsetdict, configdict, save_to_csv = True, make_cm = True)
 
