@@ -137,7 +137,7 @@ def load_model_dict(model, configdict, layer_idx, trial_number, device='cpu'):
     save_path = UMN.get_save_path('model', configdict, other=other_str, make_dir = False)
     model.load_state_dict(torch.load(save_path, map_location=device, weights_only = False))
 
-def save_mean(cur_mean, configdict, layer_idx, is_train = True):
+def save_mean(cur_mean, configdict, layer_idx):
     suffix = configdict['suffix']
     split_str = 'train'
     layer_str = f'l{layer_idx}'
@@ -145,7 +145,7 @@ def save_mean(cur_mean, configdict, layer_idx, is_train = True):
     save_path = UMN.get_save_path('mean', configdict, other=other_str, make_dir = True)
     np.save(save_path, cur_mean.cpu().numpy())
 
-def load_mean(configdict, layer_idx, is_train = True):
+def load_mean(configdict, layer_idx):
     split_str = 'train'
 
     layer_str = f'l{layer_idx}'
@@ -154,7 +154,7 @@ def load_mean(configdict, layer_idx, is_train = True):
     return np.load(save_path)
 
 
-def save_std(cur_std, configdict, layer_idx, is_train = True):
+def save_std(cur_std, configdict, layer_idx):
     suffix = configdict['suffix']
     split_str = 'train'
     layer_str = f'l{layer_idx}'
@@ -162,7 +162,7 @@ def save_std(cur_std, configdict, layer_idx, is_train = True):
     save_path = UMN.get_save_path('std', configdict, other=other_str, make_dir = True)
     np.save(save_path, cur_std.cpu().numpy())
 
-def load_std(configdict, layer_idx, is_train = True):
+def load_std(configdict, layer_idx):
     split_str = 'train'
     layer_str = f'l{layer_idx}'
     other_str = f'{layer_str}_{split_str}-std'

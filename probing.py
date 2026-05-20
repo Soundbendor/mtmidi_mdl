@@ -44,26 +44,18 @@ def calculate_mean_stdev(generator, train_subset, train_size, emb_dim, shuffle =
 
 
 
-def train_model(model, scaler, generator, opt_fn, loss_fn, train_subset, scheduler, batch_size=64, global_batch_count = 0, warmup_batch_count = 100, shuffle = True, is_classification = True, device='cpu'):
+def train_model(model, mean, stdev, train_size, generator, opt_fn, loss_fn, train_subset, batch_size=64, shuffle = True, is_classification = True, device='cpu'):
     train_dl = TUD.DataLoader(train_subset, batch_size = batch_size, shuffle=shuffle, generator=generator)
     
     total_loss = 0.
     iters = 0
 
-    cur_batch_count = global_batch_count
-    if scaler != None:
-        scaler.eval()
 
     for batch_idx, data in enumerate(train_dl):
         opt_fn.zero_grad() 
         _ipt, ground_truth = data
-        ipt = None
+        ipt = (_ipt - mean)/stdev
 
-        if scaler != None:
-            scaler.partial_fit(_ipt)
-            ipt = scaler.transform(_ipt)
-        else:
-            ipt = _ipt
 
         model_pred = model(ipt)
 
@@ -74,19 +66,12 @@ def train_model(model, scaler, generator, opt_fn, loss_fn, train_subset, schedul
             loss = loss_fn(model_pred.flatten(), ground_truth.flatten())
         
         loss.backward()
-        nn.utils.clip_grad_norm_(model.parameters(), max_norm=UC.GRAD_MAX_NORM)
         opt_fn.step()
         cur_loss = loss.item()
-        total_loss += cur_loss
-        iters += 1
-        if scheduler != None:
-            if cur_batch_count <= warmup_batch_count:
-                scheduler.step()
-            cur_batch_count += 1
-    avg_loss = total_loss/float(iters)
-    return avg_loss, cur_batch_count
+        total_loss += (cur_loss/train_size)
+    return total_loss 
 
-def valid_test_model(model, scaler, generator, loss_fn, valid_subset, batch_size=64, shuffle = True, is_classification = True, device='cpu'):
+def valid_test_model(model, mean, stdev, generator, loss_fn, valid_subset, batch_size=64, shuffle = True, is_classification = True, device='cpu'):
     valid_dl = TUD.DataLoader(valid_subset, batch_size = batch_size, shuffle=shuffle, generator=generator)
     
     total_loss = 0.
@@ -96,19 +81,13 @@ def valid_test_model(model, scaler, generator, loss_fn, valid_subset, batch_size
     preds = None
     
     model.eval()
-    if scaler != None:
-        scaler.eval()
 
     with torch.no_grad():
         for batch_idx, data in enumerate(valid_dl):
             
             _ipt, ground_truth = data
-            ipt = None
+            ipt = (_ipt - mean)/stdev
 
-            if scaler != None:
-                ipt = scaler.transform(_ipt)
-            else:
-                ipt = _ipt
 
             model_pred = model(ipt)
            
@@ -145,86 +124,101 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
     train_loss = None
     valid_loss = None
     if datadict['is_classification'] == True:
-        if datadict['is_balanced'] == True:
-            train_loss = nn.CrossEntropyLoss(reduction='mean')
-            valid_loss = nn.CrossEntropyLoss(reduction='sum')
-        else:
-            train_loss = nn.CrossEntropyLoss(reduction='mean')
-            valid_loss = nn.CrossEntropyLoss(reduction='sum')
+        train_loss = nn.CrossEntropyLoss(reduction='sum')
+        valid_loss = nn.CrossEntropyLoss(reduction='sum')
     else:
-        train_loss = nn.MSELoss(reduction='mean')
+        train_loss = nn.MSELoss(reduction='sum')
         valid_loss = nn.MSELoss(reduction='sum')
 
     # other init
     using_early_stopping =  configdict['early_stopping_check_interval'] > 0
-    patience = 0
-    cur_batch_count = 0
-        
-    best_score = float('-inf')
-    ret_score = float('-inf')
-    best_loss = float('inf')
-    ret_loss = float('inf')
-    accum_metrics = []
-    best_model_dict = None
-    actual_training_epochs = None
-    
+      
+    cur_mean = UP.load_mean(configdict, layer_idx)
+    cur_stdev = UP.load_std(configdict, layer_idx)
     # wandbstuff
     cur_run = None
     run_name = None
     short_name = None
     if configdict['use_wandb'] == True:
-        param_dict = {'l2_weight_decay_exp': l2_weight_decay_exp, 'learning_rate_exp': lr_exp, 'batch_size': batch_size, 'data_norm': data_norm, 'layer_idx': layer_idx}
+        param_dict = {'l2_weight_decay_exp': 0, 'learning_rate_exp': UC.LEARNING_RATE, 'batch_size': UC.BATCH_SIZE, 'data_norm': True, 'layer_idx': layer_idx}
         run_name, short_name = UO.get_run_and_short_names(configdict, layer_idx, param_dict) 
         cur_run = UW.init(wandbdict, {'id': run_name, 'name': short_name})
         UW.add_to_summary(cur_run, param_dict)
 
+    num_steps = subsetdict['num_preq_steps']
     # now for the actual train/valid loops
-    for cur_fold in  datadict['online_folds']:
+
+    cur_test_subset = subsetdict['test_subset']
+    cur_test_subset.dataset.set_layer_idx(layer_idx)
+    
+    # outer prequential loop
+    test_metrics = []
+    train_losses = []
+    for preq_idx in  range(num_steps+1):
         model = MLPProbe(in_dim =configdict['model_dim'], out_dim = datadict['num_classes'], hidden_dims = configdict['probe_hidden_dims'])
+        
+        full_train = False
+        if preq_idx == num_steps:
+            full_train = True
+        cur_train_subset = None
+        cur_valid_subset = None
+        cur_train_size = None
+        if full_train == False:
+            cur_train_subset = subsetdict['preq'][i]['train_subset']
+            cur_valid_subset = subsetdict['preq'][i]['encode_subset']
+            cur_train_size = subsetdict['preq'][i]['train_size']
+        else:
+            cur_train_subset = subsetdict['preq_all_subset']
+            cur_valid_subset = subsetdict['valid_subset']
+            cur_train_size = subsetdict['preq_all_size']
+        
+        cur_train_subset.dataset.set_layer_idx(layer_idx)
+        cur_valid_subset.dataset.set_layer_idx(layer_idx)
+
+        patience = 0
+        
+        best_loss = float('inf')
+        accum_metrics = []
+        valid_nlls = []
+        train_avg_nlls = []
+        best_model_dict = None
+        actual_training_epochs = None
+
         for epoch_idx in range(configdict['num_epochs']):
             # train/valid
-            train_avg_loss, cur_batch_count = train_model(model, scaler, torch_gen, opt_fn, train_loss, cur_fold['train_subset'], warmup_sched, batch_size=batch_size, global_batch_count = cur_batch_count, warmup_batch_count = UC.WARMUP_BATCH_COUNT, shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
-            total_loss, valid_truths, valid_preds = valid_test_model(model, scaler, torch_gen, valid_loss, subsetdict['valid_subset'], batch_size=batch_size, shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
-            # get validation metrics
-            valid_metrics = UME.get_metrics(valid_truths, valid_preds, total_loss, layer_idx, trial_number, datadict, subsetdict, configdict, save_to_csv = False, make_cm = False)
-            accum_metrics.append(valid_metrics)
-            cur_score = UME.get_optimization_metric(valid_metrics, datadict)
+            train_avg_loss = train_model(model, cur_mean, cur_stdev, cur_train_size, torch_gen, opt_fn, train_loss, cur_train_subset, batch_size=batch_size, shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
+            valid_loss, valid_truths, valid_preds = valid_test_model(model, cur_mean, cur_stdev, torch_gen, valid_loss, cur_valid_subset, batch_size=batch_size, shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
 
+            train_avg_nlls.append(train_avg_loss)
             # early stopping
             if using_early_stopping == False:
-                ret_score = cur_score
-                ret_loss = total_loss
+                best_loss = valid_loss
             else:
                 if epoch_idx % configdict['early_stopping_check_interval'] == 0:
-                    if cur_score > best_score:
-                        best_score = cur_score
-                        best_loss = total_loss
+                    if best_loss < valid_loss:
+                        best_loss = valid_loss
                         patience = 0
                         best_model_dict = copy.deepcopy(model.state_dict())
-                        if scaler != None:
-                            best_scaler_dict = copy.deepcopy(scaler.state_dict())
                     else:
                         patience += 1
                 if patience >= configdict['early_stopping_patience']:
                     actual_training_epochs = epoch_idx + 1
-                    ret_score = best_score
-                    ret_loss = best_loss
+                    model.load_state_dict(best_model_dict)
                     break
                 elif epoch_idx == (configdict['num_epochs'] - 1):
                     # end of training, just report what you have
                     actual_training_epochs = epoch_idx + 1
-                    best_model_dict = copy.deepcopy(model.state_dict())
-                    if scaler != None:
-                        best_scaler_dict = copy.deepcopy(scaler.state_dict())
-                    ret_score = cur_score
-                    ret_loss = total_loss
+                    best_loss = valid_loss
+        # training on full training set, should not encode actual validation set
+        if full_train == False:
+            nlls.append(best_loss)
 
-    # model saving
-    if best_model_dict != None:
-        UP.save_model_dict(best_model_dict, configdict, layer_idx, trial_number)
+        test_loss, test_truths, test_preds = valid_test_model(model, cur_mean, cur_stdev, torch_gen, valid_loss, cur_test_subset, batch_size=batch_size, shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
+        test_metrics = UME.get_metrics(test_truths, test_preds, nlls, layer_idx, trial_number, datadict, subsetdict, configdict, save_to_csv = True, make_cm = True)
+
     # bookkeeping
     trial.set_user_attr(key='actual_training_epochs', value=actual_training_epochs)
-    trial.set_user_attr(key='valid_loss', value=ret_loss)
+    trial.set_user_attr(key='test_loss', value=test_loss)
     # naming
     trial.set_user_attr(key='run_name', value=run_name)
     trial.set_user_attr(key='short_name', value=short_name)

@@ -8,24 +8,6 @@ from . import util_probing as UP
 from . import util_constants as UC
 
 
-def aic(nll, k, N, per_sample = False):
-    res = 2. * nll + 2.*k
-    if per_sample == True:
-        res /= N
-    return res
-
-def bic(nll, k, N, per_sample = False):
-    res = 2. * nll + k * np.log(N)
-    if per_sample == True:
-        res /= N
-    return res
-
-def ebic(nll, k, N, D, gamma = UC.EBIC_GAMMA, per_sample = False):
-    res = 2. * nll + k * np.log(N) + 2 * gamma * k* np.log(D)
-    if per_sample == True:
-        res /= N
-    return res
-
 def get_save_other_str(layer_idx):
     return f'l{layer_idx}'
 
@@ -90,11 +72,16 @@ def make_confusion_matrix(truths, preds, layer_idx, datadict, configdict):
     plt.clf()
     return cmd.confusion_matrix
 
+
+def calculate_log2_nll_sum(nll_arr):
+    return np.sum(nll_arr) * UC.LOG2E
+
 # make_cm = make confusion matrix
-def get_classification_metrics(truths, preds, loss, layer_idx, trial_number, datadict, subsetdict, configdict, save_to_csv = False, make_cm = False):
+def get_classification_metrics(truths, preds, nll_arr, layer_idx, trial_number, datadict, subsetdict, configdict, save_to_csv = False, make_cm = False):
 
     ret = {} 
-    ret['loss'] = loss
+    ret['log2_nll_sum'] = calculate_log2_nll_sum(nll_arr)
+    ret['online_mdl'] = subsetdict['t1logk'] + ret['log2_nll_sum']
     ret['layer_idx'] = layer_idx
     ret['accuracy_score']= SKM.accuracy_score(truths, preds)
     ret['f1_macro'] = SKM.f1_score(truths, preds, average='macro')
@@ -102,44 +89,12 @@ def get_classification_metrics(truths, preds, loss, layer_idx, trial_number, dat
     ret['balanced_accuracy_score'] = SKM.balanced_accuracy_score(truths, preds)
     # only save for eval
     if save_to_csv == True:
-        N = None
-        pr = UP.load_part_rto(configdict, trial_number, layer_idx)
-        if configdict['eval_nll'] == True:
-            N = subsetdict['train_size']
-        else:
-            N = subsetdict['test_size']
-        model_size = configdict['model_size']
-        D = UC.FFN_DIM[model_size] 
-        c = datadict['num_classes']
-        k = (D*c) + c
-        ret['aic_rep'] = aic(loss, D, N, per_sample = False)
-        ret['aic_rep_avg'] = aic(loss, D, N, per_sample = True)
-        ret['bic_rep'] = bic(loss, D, N, per_sample = False) 
-        ret['bic_rep_avg'] = bic(loss, D, N, per_sample = True) 
-        ret['ebic_rep'] = ebic(loss, D, N, D, gamma = UC.EBIC_GAMMA, per_sample = False) 
-        ret['ebic_rep_avg'] = ebic(loss, D, N, D, gamma = UC.EBIC_GAMMA, per_sample = True) 
-
-        ret['aic_cls'] = aic(loss, k, N, per_sample = False)
-        ret['aic_cls_avg'] = aic(loss, k, N, per_sample = True)
-        ret['bic_cls'] = bic(loss, k, N, per_sample = False) 
-        ret['bic_cls_avg'] = bic(loss, k, N, per_sample = True) 
-        ret['ebic_cls'] = ebic(loss, k, N, k, gamma = UC.EBIC_GAMMA, per_sample = False) 
-        ret['ebic_cls_avg'] = ebic(loss, k, N, k, gamma = UC.EBIC_GAMMA, per_sample = True) 
-        
-        ret['aic_pr'] = aic(loss, pr, N, per_sample = False)
-        ret['aic_pr_avg'] = aic(loss, pr, N, per_sample = True)
-        ret['bic_pr'] = bic(loss, pr, N, per_sample = False) 
-        ret['bic_pr_avg'] = bic(loss, pr, N, per_sample = True) 
-        ret['ebic_pr'] = ebic(loss, pr, N, pr, gamma = UC.EBIC_GAMMA, per_sample = False) 
-        ret['ebic_pr_avg'] = ebic(loss, pr, N, pr, gamma = UC.EBIC_GAMMA, per_sample = True) 
-
-
         save_results_to_csv(ret, configdict, layer_idx)
     if make_cm == True:
         ret['cm'] = make_confusion_matrix(truths, preds, layer_idx, datadict, configdict)
     return ret
 
-def get_regression_metrics(truths, preds, loss, layer_idx, configdict, save_to_csv = False):
+def get_regression_metrics(truths, preds, nll_arr, layer_idx, configdict, save_to_csv = False):
     metrics = ["mean_squared_error",
                "r2_score",
                "mean_absolute_error",
@@ -151,17 +106,18 @@ def get_regression_metrics(truths, preds, loss, layer_idx, configdict, save_to_c
                "d2_absolute_error_score"
                ]
     ret = {metric: getattr(SKM, name)(truths,preds) for metrics in metrics}
-    ret['loss'] = loss
+    ret['log2_nll_sum'] = calculate_log2_nll_sum(nll_arr)
+    ret['online_mdl'] = subsetdict['t1logk'] + ret['log2_nll_sum']
     ret['layer_idx'] = layer_idx
     if save_to_csv == True:
         save_results_to_csv(ret, configdict, layer_idx)
     return ret
 
-def get_metrics(truths, preds, loss, layer_idx, trial_number, datadict, subsetdict, configdict, save_to_csv = False, make_cm = False):
+def get_metrics(truths, preds, nlls, layer_idx, trial_number, datadict, subsetdict, configdict, save_to_csv = False, make_cm = False):
     if datadict['is_classification'] == True:
-        return get_classification_metrics(truths, preds, loss, layer_idx, trial_number, datadict, subsetdict, configdict, save_to_csv = save_to_csv, make_cm = make_cm)
+        return get_classification_metrics(truths, preds, nlls, layer_idx, trial_number, datadict, subsetdict, configdict, save_to_csv = save_to_csv, make_cm = make_cm)
     else:
-        return get_regression_metrics(truths, preds, loss, layer_idx, configdict, save_to_csv = save_to_csv)
+        return get_regression_metrics(truths, preds, nlls, layer_idx, configdict, save_to_csv = save_to_csv)
 
 def get_optimization_metric(metric_dict, datadict):
     ret = None
