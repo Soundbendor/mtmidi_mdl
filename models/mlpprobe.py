@@ -8,8 +8,6 @@ class MLPProbe(nn.Module):
         super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
-        self.dropout = dropout
-        self.initial_dropout = True
         self.num_hidden = len(hidden_dims)
         self.num_layers = self.num_hidden + 1
 

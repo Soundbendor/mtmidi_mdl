@@ -75,7 +75,6 @@ def valid_test_model(model, mean, stdev, generator, loss_fn, valid_subset, batch
     valid_dl = TUD.DataLoader(valid_subset, batch_size = batch_size, shuffle=shuffle, generator=generator)
     
     total_loss = 0.
-    iters = 0
     # for accumulating ground truths and predictions
     truths = None
     preds = None
@@ -91,7 +90,6 @@ def valid_test_model(model, mean, stdev, generator, loss_fn, valid_subset, batch
 
             model_pred = model(ipt)
            
-            # don't need loss for testing
             if loss_fn != None:
                 if is_classification == True:
                     loss = loss_fn(model_pred, ground_truth)
@@ -100,7 +98,6 @@ def valid_test_model(model, mean, stdev, generator, loss_fn, valid_subset, batch
                 
                 cur_loss = loss.item()
                 total_loss += cur_loss
-                iters += 1
 
             truths, preds = UP.accumulate_truths_preds(truths, ground_truth, preds, model_pred, batch_idx, is_classification)
 
