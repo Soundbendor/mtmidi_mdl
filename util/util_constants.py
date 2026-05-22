@@ -15,30 +15,23 @@ MODELS_FOLDER = 'model_models'
 DATA_STATS_FOLDER = 'data_stats'
 PART_RTO_FOLDER = 'part_rto'
 RDB_FOLDER = 'rdb'
-NUM_FOLDS = 20
 EARLY_STOPPING_CHECK_INTERVAL = 1
-EARLY_STOPPING_PATIENCE = 500
+EARLY_STOPPING_PATIENCE = 50
 NUM_STEPS = 5
 SCHED_PATIENCE = 15
 MEMMAP = True
-NUM_EPOCHS = 1000
+NUM_EPOCHS = 500
 TRAIN_PCT = 0.92
 TEST_SUBPCT = 0.5
-PREQ_STEPS = 5
 NUM_CLASS_THRESH = 3
 BATCH_SIZE = 1024
 LEARNING_RATE = 10.**(-3)
 # no l2 weight decay (set to -2 in original which meant turn off)
 DATALOADER_SHUFFLE = True
-TRAIN_FOLDS = list(range(1,18))
-TEST_FOLDS = list(range(18,21))
 IS_64BIT = False
 SEED = 39
 SPLIT_SEED = 39
-TRAIN_PCT = 0.7
-TEST_SUBPCT = 0.5
-OPT_DIRECTION = 'maximize'
-
+USE_WEIGHTS = False
 MLPPROBE_HIDDEN_DIMS = [512]
 
 
@@ -121,7 +114,7 @@ CLS_PPRINT = {'f1_macro': 'F1 (macro)',
               'f1_micro': 'F1 (micro)',
               'layer_idx': 'Layer Index',
               'loss': 'NLL',
-              'loss_base2': 'NLL_base2',
+              'loss_base2': 'NLL (base 2)',
               'accuracy_score': 'Accuracy',
               'balanced_accuracy_score': 'Balanced Accuracy'
               }

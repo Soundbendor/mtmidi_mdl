@@ -28,16 +28,25 @@ def login():
 def init(wdict, override = None):
     if override is not None:
         wdict.update(override)
-    run = wandb.init(
-            entity = wdict['entity'], 
-            project = wdict['project'],
-            dir = wdict['dir'],
-            id = wdict['id'],
-            name = wdict['name'],
-            config = wdict['config'],
-            settings=wdict['settings'],
-            reinit = True
-            )
+    run = None
+    cur_args = {'entity': wdict['entity'], 
+                'project': wdict['project'],
+                'dir': wdict['dir'],
+                'id': wdict['id'],
+                'name': wdict['name'],
+                'config': wdict['config'],
+                'settings': wdict['settings'],
+                'mode': 'online',
+                'reinit': True
+                }
+
+    try:
+        run = wandb.init(**cur_args)
+        print('wandb init in ONLINE mode')
+    except:
+        cur_args['mode'] = 'offline'
+        run = wandb.init(**cur_args)
+        print('wandb init in OFFLINE mode')
     return run
 
 def build_config(parser_args, datadict, subsetdict):
@@ -60,7 +69,7 @@ def build_config(parser_args, datadict, subsetdict):
     _config['test_subpct'] = subsetdict['test_subpct']
 
     _config['is_balanced'] = datadict['is_balanced']
-    _config['use_weights'] = subsetdict['weights'].shape[0] > 0
+    _config['use_weights'] = (subsetdict['weights'].shape[0] > 0) and (UC.USE_WEIGHTS == True)
     return _config
 
 
