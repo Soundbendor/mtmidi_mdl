@@ -149,7 +149,7 @@ DATASET_PREQ_STEPS = {"polyrhythms": 7
                       "simple_progressions": 7
                  }
 
-
+DATASET_PREQ_TRAIN_SIZES = {k:(1./np.power(2, np.arange(v+1)))[::-1] for (k,v) in DATASET_PREQ_STEPS.items()}
 #datasets that are regression
 REG_DATASETS = set(['tempos'])
 # datasets to train on middle on

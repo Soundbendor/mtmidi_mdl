@@ -8,18 +8,37 @@ from . import util_probing as UP
 from . import util_constants as UC
 
 
-def get_save_other_str(layer_idx):
-    return f'l{layer_idx}'
+# take an array of dicts and turn it in to a dict of arrays
+def accum_metrics_to_metric_dict(accum_metrics):
+    ret = {}
+    for i in range(len(accum_metrics)):
+        first_time = False
+        if i == 0:
+            first_time = True
+        for k,v in accum_metrics[i].items():
+            # don't save confusion matric
+            if k != 'cm':
+                if first_time == True:
+                    ret[k] = []
+                ret[k].append(v)
+    return ret
 
-def save_results_to_csv(resdict, configdict, layer_idx):
+# 0-idxed so preq_idx == num_preq_steps is training on full training set
+def is_full_train(preq_idx, configdict):
+    return preq_idx == configdict['num_preq_steps']
+
+def get_preq_train_prop(preq_idx, configdict):
+    cur_dataset = configdict['dataset']
+    cur_prop = UC.DATASET_PREQ_TRAIN_SIZES[cur_dataset][preq_idx]
+    return cur_prop
+
+def get_save_other_str(preq_idx, layer_idx):
+    return f'p{preq_idx}_l{layer_idx}'
+
+def save_results_to_csv(resdict, configdict, preq_idx, layer_idx):
     res_path = None
-    other_str = 'best'
-    if configdict['eval_best'] == False:
-        other_str = get_save_other_str(layer_idx)
-    if configdict['eval_nll'] == True:
-        res_path = 'res_train'
-    else:
-        res_path = 'res'
+    other_str = get_save_other_str(preq_idx, layer_idx)
+    res_path = 'res'
     save_path = UMN.get_save_path(res_path, configdict, other=other_str, make_dir = True) 
     cur_header = list(resdict.keys())
     f = open(save_path, 'w')
@@ -28,7 +47,7 @@ def save_results_to_csv(resdict, configdict, layer_idx):
     csvw.writerow(resdict)
     f.close()
 
-def make_confusion_matrix(truths, preds, layer_idx, datadict, configdict):
+def make_confusion_matrix(truths, preds, preq_idx, layer_idx, datadict, configdict):
     figsize = None
     hide_labels = False
     if datadict['num_classes'] < 10:
@@ -61,12 +80,12 @@ def make_confusion_matrix(truths, preds, layer_idx, datadict, configdict):
 
     expr_name = UC.EXPR_PRETTY_NAMES[configdict['expr_type']]
     dataset_name = UC.DATASET_PPRINT[configdict['dataset']]
-    title = f'{dataset_name} {expr_name} Results'
+    cur_train_prop = get_preq_train_prop(preq_idx, configdict)
+    cur_train_pct = f'{cur_train_prop * 100:.2f}%'
+    title = f'{dataset_name} ({cur_train_pct} of Train Data) {expr_name} Results'
     ax.set_title(title)
     fig.tight_layout()
-    other_str = 'best'
-    if configdict['eval_best'] == False:
-        other_str = get_save_other_str(layer_idx)
+    other_str = get_save_other_str(preq_idx, layer_idx)
     save_path = UMN.get_save_path('cm', configdict, other=other_str, make_dir = True) 
     plt.savefig(save_path)
     plt.clf()
@@ -77,7 +96,7 @@ def calculate_log2_nll_sum(nll_arr):
     return np.sum(nll_arr) * UC.LOG2E
 
 # make_cm = make confusion matrix
-def get_classification_metrics(truths, preds, nll_arr, layer_idx, trial_number, datadict, subsetdict, configdict, save_to_csv = False, make_cm = False):
+def get_classification_metrics(truths, preds, nll_arr, preq_idx, layer_idx, trial_number, datadict, subsetdict, configdict, save_to_csv = False, make_cm = False):
 
     ret = {} 
     ret['log2_nll_sum'] = calculate_log2_nll_sum(nll_arr)
@@ -87,14 +106,17 @@ def get_classification_metrics(truths, preds, nll_arr, layer_idx, trial_number, 
     ret['f1_macro'] = SKM.f1_score(truths, preds, average='macro')
     ret['f1_micro'] = SKM.f1_score(truths, preds, average='micro')
     ret['balanced_accuracy_score'] = SKM.balanced_accuracy_score(truths, preds)
+    ret['is_full_train'] = is_full_train(preq_idx, configdict)
+    ret['train_prop'] = get_preq_train_prop(preq_idx, configdict)
+
     # only save for eval
     if save_to_csv == True:
-        save_results_to_csv(ret, configdict, layer_idx)
+        save_results_to_csv(ret, configdict, preq_idx, layer_idx)
     if make_cm == True:
-        ret['cm'] = make_confusion_matrix(truths, preds, layer_idx, datadict, configdict)
+        ret['cm'] = make_confusion_matrix(truths, preds, preq_idx, layer_idx, datadict, configdict)
     return ret
 
-def get_regression_metrics(truths, preds, nll_arr, layer_idx, configdict, save_to_csv = False):
+def get_regression_metrics(truths, preds, nll_arr, preq_idx, layer_idx, configdict, save_to_csv = False):
     metrics = ["mean_squared_error",
                "r2_score",
                "mean_absolute_error",
@@ -109,15 +131,17 @@ def get_regression_metrics(truths, preds, nll_arr, layer_idx, configdict, save_t
     ret['log2_nll_sum'] = calculate_log2_nll_sum(nll_arr)
     ret['online_mdl'] = subsetdict['t1logk'] + ret['log2_nll_sum']
     ret['layer_idx'] = layer_idx
+    ret['is_full_train'] = is_full_train(preq_idx, configdict)
+    ret['train_prop'] = get_preq_train_prop(preq_idx, configdict)
     if save_to_csv == True:
-        save_results_to_csv(ret, configdict, layer_idx)
+        save_results_to_csv(ret, configdict, preq_idx, layer_idx)
     return ret
 
-def get_metrics(truths, preds, nlls, layer_idx, trial_number, datadict, subsetdict, configdict, save_to_csv = False, make_cm = False):
+def get_metrics(truths, preds, nlls, preq_idx, layer_idx, trial_number, datadict, subsetdict, configdict, save_to_csv = False, make_cm = False):
     if datadict['is_classification'] == True:
-        return get_classification_metrics(truths, preds, nlls, layer_idx, trial_number, datadict, subsetdict, configdict, save_to_csv = save_to_csv, make_cm = make_cm)
+        return get_classification_metrics(truths, preds, nlls, preq_idx, layer_idx, trial_number, datadict, subsetdict, configdict, save_to_csv = save_to_csv, make_cm = make_cm)
     else:
-        return get_regression_metrics(truths, preds, nlls, layer_idx, configdict, save_to_csv = save_to_csv)
+        return get_regression_metrics(truths, preds, nlls, preq_idx, layer_idx, configdict, save_to_csv = save_to_csv)
 
 def get_optimization_metric(metric_dict, datadict):
     ret = None

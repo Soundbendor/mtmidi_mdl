@@ -12,7 +12,6 @@ import util.util_probing as UP
 import util.util_rdb as UR
 
 from models.mlpprobe import MLPProbe
-from models.standard_scaler import StandardScaler
 from probe_dataset import ProbeDataset
 
 from functools import partial
@@ -48,7 +47,6 @@ def train_model(model, mean, stdev, train_size, generator, opt_fn, loss_fn, trai
     train_dl = TUD.DataLoader(train_subset, batch_size = batch_size, shuffle=shuffle, generator=generator)
     
     total_loss = 0.
-    iters = 0
 
 
     for batch_idx, data in enumerate(train_dl):
@@ -116,7 +114,7 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
     torch_gen.manual_seed(configdict['torch_seed'])
     # init opt/loss
 
-    opt_fn = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    opt_fn = torch.optim.Adam(model.parameters(), lr=UC.LEARNING_RATE)
 
     train_loss = None
     valid_loss = None
@@ -137,7 +135,7 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
     run_name = None
     short_name = None
     if configdict['use_wandb'] == True:
-        param_dict = {'l2_weight_decay_exp': 0, 'learning_rate_exp': UC.LEARNING_RATE, 'batch_size': UC.BATCH_SIZE, 'data_norm': True, 'layer_idx': layer_idx}
+        param_dict = {'learning_rate_exp': UC.LEARNING_RATE, 'batch_size': UC.BATCH_SIZE, 'data_norm': True, 'layer_idx': layer_idx}
         run_name, short_name = UO.get_run_and_short_names(configdict, layer_idx, param_dict) 
         cur_run = UW.init(wandbdict, {'id': run_name, 'name': short_name})
         UW.add_to_summary(cur_run, param_dict)
@@ -149,8 +147,12 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
     cur_test_subset.dataset.set_layer_idx(layer_idx)
     
     # outer prequential loop
-    test_metrics = []
-    train_losses = []
+    accum_metrics = []
+    valid_nlls = []
+    test_nll = -1. 
+    train_avg_nlls = []
+    actual_training_epochs = []
+
     for preq_idx in  range(num_steps+1):
         model = MLPProbe(in_dim =configdict['model_dim'], out_dim = datadict['num_classes'], hidden_dims = configdict['probe_hidden_dims'])
         
@@ -175,11 +177,8 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
         patience = 0
         
         best_loss = float('inf')
-        accum_metrics = []
-        valid_nlls = []
-        train_avg_nlls = []
+
         best_model_dict = None
-        actual_training_epochs = None
 
         for epoch_idx in range(configdict['num_epochs']):
             # train/valid
@@ -191,37 +190,46 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
             if using_early_stopping == False:
                 best_loss = valid_loss
             else:
+                last_epoch = epoch_idx == (configdict['num_epochs'] - 1)
                 if epoch_idx % configdict['early_stopping_check_interval'] == 0:
-                    if best_loss < valid_loss:
+                    if valid_loss < best_loss:
                         best_loss = valid_loss
                         patience = 0
                         best_model_dict = copy.deepcopy(model.state_dict())
                     else:
                         patience += 1
-                if patience >= configdict['early_stopping_patience']:
+                if patience >= configdict['early_stopping_patience'] or last_epoch == True:
                     actual_training_epochs = epoch_idx + 1
                     model.load_state_dict(best_model_dict)
                     break
-                elif epoch_idx == (configdict['num_epochs'] - 1):
+                elif last_epoch == True:
                     # end of training, just report what you have
                     actual_training_epochs = epoch_idx + 1
                     best_loss = valid_loss
         # training on full training set, should not encode actual validation set
         if full_train == False:
-            nlls.append(best_loss)
+            valid_nlls.append(best_loss)
+        else:
+            test_nll = best_loss
 
         test_loss, test_truths, test_preds = valid_test_model(model, cur_mean, cur_stdev, torch_gen, valid_loss, cur_test_subset, batch_size=batch_size, shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
-        test_metrics = UME.get_metrics(test_truths, test_preds, nlls, layer_idx, trial_number, datadict, subsetdict, configdict, save_to_csv = True, make_cm = True)
+        test_metrics = UME.get_metrics(test_truths, test_preds, valid_nlls, preq_idx, layer_idx, trial_number, datadict, subsetdict, configdict, save_to_csv = True, make_cm = True)
+        accum_metrics.append(test_metrics)
 
-    online_mdl = test_metrics['online_mdl']
     # bookkeeping
-    trial.set_user_attr(key='actual_training_epochs', value=actual_training_epochs)
-    trial.set_user_attr(key='test_loss', value=test_loss)
-    trial.set_user_attr(key='online_mdl', value=online_mdl)
+
+    metric_dict = UME.accum_metrics_to_metric_dict(accum_metrics)
+    for k,v in metric_dict.items():
+        trial.set_user_attr(key=k, value=v)
+    
+    trial.set_user_attr(key='valid_nlls', value = valid_nlls)
+    trial.set_user_attr(key='test_nll', value = test_nll)
+    trial.set_user_attr(key='train_avg_nlls', value = train_avg_nlls)
+    trial.set_user_attr(key='actual_training_epochs', value = actual_training_epochs)
+    
     # naming
     trial.set_user_attr(key='run_name', value=run_name)
     trial.set_user_attr(key='short_name', value=short_name)
-
     # wandb stuff
     if configdict['use_wandb'] == True:
         UW.log_array(cur_run, 'train_avg_nll', train_avg_nlls)
@@ -239,9 +247,7 @@ if __name__ == "__main__":
     parser.add_argument("-et", "--expr_type", type=str, default="mlp", help="experiment type")
     parser.add_argument("-wdb", "--use_wandb", type=strtobool, default=True, help="sync to wandb")
     parser.add_argument("-cd", "--use_cuda", type=strtobool, default=True, help="use cuda")
-    parser.add_argument("-ev", "--eval", type=strtobool, default=False, help="eval")
     parser.add_argument("-st", "--stats", type=strtobool, default=False, help="calculate stats")
-    parser.add_argument("-eb", "--eval_best", type=strtobool, default=False, help="eval on the best trial per model")
     parser.add_argument("-pr", "--part_rto", type=strtobool, default=False, help="calculate participation ratio")
     parser.add_argument("-rs", "--restart_study", type=strtobool, default=False, help="force restart of optuna study")
     parser.add_argument("-sh", "--from_share", type=strtobool, default=False, help="load from share partition")
