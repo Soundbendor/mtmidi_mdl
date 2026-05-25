@@ -30,7 +30,6 @@ LEARNING_RATE = 10.**(-3)
 DATALOADER_SHUFFLE = True
 IS_64BIT = False
 SEED = 39
-SPLIT_SEED = 39
 USE_WEIGHTS = False
 MLPPROBE_HIDDEN_DIMS = [512]
 
@@ -135,7 +134,7 @@ MODEL_PPRINT = {'baseline-concat': "Concat.",
                  }
 
 # at least 10 samples per step
-DATASET_PREQ_STEPS = {"polyrhythms": 7
+DATASET_PREQ_STEPS = {"polyrhythms": 7,
                       "dynamics": 7,
                       "seventh_chords": 7,
                       "mode_mixture": 7,

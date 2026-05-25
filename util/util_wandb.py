@@ -49,29 +49,6 @@ def init(wdict, override = None):
         print('wandb init in OFFLINE mode')
     return run
 
-def build_config(parser_args, datadict, subsetdict):
-    _config = {k:v for (k,v) in vars(parser_args).items()}
-    model_shape = UMN.get_acts_shape(_config['model_size'])
-    _config['num_epochs'] = UC.NUM_EPOCHS
-    _config['is_64bit'] = UC.IS_64BIT
-    _config['model_dim'] = model_shape[1]
-    _config['model_num_layers'] = model_shape[0]
-    _config['dataloader_shuffle'] = UC.DATALOADER_SHUFFLE
-    if parser_args.expr_type == 'mlp':
-        _config['probe_hidden_dims'] = UC.MLPPROBE_HIDDEN_DIMS
-    elif parser_args.expr_type == 'linear':
-        _config['probe_hidden_dims'] = []
-    _config['early_stopping_check_interval'] = UC.EARLY_STOPPING_CHECK_INTERVAL
-    _config['early_stopping_patience'] = UC.EARLY_STOPPING_PATIENCE
-
-    _config['num_preq_steps'] = subsetdict['num_preq_steps']
-    _config['train_pct'] = subsetdict['train_pct']
-    _config['test_subpct'] = subsetdict['test_subpct']
-
-    _config['is_balanced'] = datadict['is_balanced']
-    _config['use_weights'] = (subsetdict['weights'].shape[0] > 0) and (UC.USE_WEIGHTS == True)
-    return _config
-
 
 def build_initdict(parser_args, _config):
     _d = {'entity': entity, 'project': f'mtmidi_mdl-{parser_args.expr_type}', 'dir': UC.WANDB_PATH, 'settings': wandb.Settings(init_timeout=120)}

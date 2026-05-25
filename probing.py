@@ -18,6 +18,9 @@ from functools import partial
 from distutils.util import strtobool
 import os, sys, time, argparse, copy
 
+def set_seed(seed):
+    torch.manual_seed(seed)
+
 def calculate_mean_stdev(generator, train_subset, train_size, emb_dim, shuffle = True, device='cpu'):
     train_dl = TUD.DataLoader(train_subset, batch_size = train_size, shuffle=shuffle, generator=generator)
     
@@ -109,12 +112,9 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
      
    
     # init model
-    # init rng
-    torch_gen = torch.Generator(device=device)
-    torch_gen.manual_seed(configdict['torch_seed'])
     # init opt/loss
 
-    opt_fn = torch.optim.Adam(model.parameters(), lr=UC.LEARNING_RATE)
+    opt_fn = torch.optim.Adam(model.parameters(), lr=configdict['learning_rate'])
 
     train_loss = None
     valid_loss = None
@@ -135,7 +135,7 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
     run_name = None
     short_name = None
     if configdict['use_wandb'] == True:
-        param_dict = {'learning_rate_exp': UC.LEARNING_RATE, 'batch_size': UC.BATCH_SIZE, 'data_norm': True, 'layer_idx': layer_idx}
+        param_dict = {'learning_rate_exp': configdict['learning_rate'], 'batch_size': configdict['batch_size'], 'data_norm': True, 'layer_idx': layer_idx}
         run_name, short_name = UO.get_run_and_short_names(configdict, layer_idx, param_dict) 
         cur_run = UW.init(wandbdict, {'id': run_name, 'name': short_name})
         UW.add_to_summary(cur_run, param_dict)
@@ -154,6 +154,11 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
     actual_training_epochs = []
 
     for preq_idx in  range(num_steps+1):
+
+        # init rng
+        torch_gen = torch.Generator(device=device)
+        torch_gen.manual_seed(configdict['seed'])
+        set_seed(configdict['seed'])
         model = MLPProbe(in_dim =configdict['model_dim'], out_dim = datadict['num_classes'], hidden_dims = configdict['probe_hidden_dims'])
         
         full_train = False
@@ -182,8 +187,8 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
 
         for epoch_idx in range(configdict['num_epochs']):
             # train/valid
-            train_avg_loss = train_model(model, cur_mean, cur_stdev, cur_train_size, torch_gen, opt_fn, train_loss, cur_train_subset, batch_size=batch_size, shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
-            valid_loss, valid_truths, valid_preds = valid_test_model(model, cur_mean, cur_stdev, torch_gen, valid_loss, cur_valid_subset, batch_size=batch_size, shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
+            train_avg_loss = train_model(model, cur_mean, cur_stdev, cur_train_size, torch_gen, opt_fn, train_loss, cur_train_subset, batch_size=configdict['batch_size'], shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
+            valid_loss, valid_truths, valid_preds = valid_test_model(model, cur_mean, cur_stdev, torch_gen, valid_loss, cur_valid_subset, batch_size=configdict['batch_size'], shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
 
             train_avg_nlls.append(train_avg_loss)
             # early stopping
@@ -245,6 +250,7 @@ if __name__ == "__main__":
     parser.add_argument("-ds", "--dataset", type=str, default="polyrhythms", help="dataset")
     parser.add_argument("-ms", "--model_size", type=str, default="musicgen-small", help="musicgen-small/musicgen-medium/musicgen-large/jukebox/MERT-v1-95M/MERT-v1-330M/wav2vec2-base/wav2vec2-large")
     parser.add_argument("-et", "--expr_type", type=str, default="mlp", help="experiment type")
+    parser.add_argument("-dbg", "--debug", type=strtobool, default=False, help="debug")
     parser.add_argument("-wdb", "--use_wandb", type=strtobool, default=True, help="sync to wandb")
     parser.add_argument("-cd", "--use_cuda", type=strtobool, default=True, help="use cuda")
     parser.add_argument("-st", "--stats", type=strtobool, default=False, help="calculate stats")
@@ -253,8 +259,6 @@ if __name__ == "__main__":
     parser.add_argument("-sh", "--from_share", type=strtobool, default=False, help="load from share partition")
     parser.add_argument("-sj", "--slurm_job", type=int, default=0, help="slurm job")
     parser.add_argument("-sf", "--suffix", type=int, default=1, help="suffix")
-    parser.add_argument("-tsd", "--torch_seed", type=int, default=UC.SEED, help="torch random seed")
-    parser.add_argument("-ssd", "--split_seed", type=int, default=UC.SPLIT_SEED, help="seed for splitting")
 
     args = parser.parse_args()
 
@@ -264,35 +268,36 @@ if __name__ == "__main__":
         device = 'cuda'
         torch.cuda.empty_cache()
         torch.set_default_device(device)
-    torch.manual_seed(args.torch_seed)
     from_dir = ""
     if args.from_share == True:
         from_dir = os.path.join(UC.SHARE_PATH, 'mtmidi_mdl')
     datadict = UD.load_data_dict(args.dataset)
 
     cur_ds = ProbeDataset(datadict, args.model_size, layer_idx=0, from_dir = from_dir, to_torch = True, device = device)
-    subsetdict = UP.get_preq_valid_test_subsets(cur_ds, datadict, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBPCT, seed = args.split_seed)
 
-    # wandb stuff
-    configdict = UW.build_config(args, datadict, subsetdict)
+    configdict = UP.build_config(args, datadict)
+    subsetdict = UP.get_preq_valid_test_subsets(cur_ds, datadict, configdict)
     wandbdict = UW.build_initdict(args, configdict)
-    if args.stats == True:
-        torch_gen = torch.Generator(device=device)
-        torch_gen.manual_seed(configdict['torch_seed'])
+
+    if args.debug == True:
+        pass
+    elif args.stats == True:
         train_subset = subsetdict['preq_all_subset']
         train_size = subsetdict['preq_all_size']
         for layer_idx in range(configdict['model_num_layers']): 
+            torch_gen = torch.Generator(device=device)
+            torch_gen.manual_seed(configdict['seed'])
             train_subset.dataset.set_layer_idx(layer_idx)
             cur_mean, cur_std = calculate_mean_stdev(torch_gen, train_subset, train_size, configdict['model_dim'] , shuffle = True, device=device)
             print(layer_idx, cur_pr, cur_mean, cur_std)
-            UP.save_mean(cur_mean, configdict, layer_idx, is_train = True)
-            UP.save_std(cur_std, configdict, layer_idx, is_train = True)
-    elif args.eval == False:
+            UP.save_mean(cur_mean, configdict, layer_idx)
+            UP.save_std(cur_std, configdict, layer_idx)
+    else:
         # TRAINING ==========
         if args.use_wandb == True:
             UW.login()
         # optuna stuff
-        studydict = UO.create_or_load_study(args, seed=UC.SEED, evaluation = False)
+        studydict = UO.create_or_load_study(args, configdict, evaluation = False)
         UO.record_dict_in_study(studydict, configdict)
         objective = partial(_objective, datadict=datadict, subsetdict=subsetdict, configdict=configdict, wandbdict=wandbdict, device=device)
         callback_arr = [UO.study_callback]

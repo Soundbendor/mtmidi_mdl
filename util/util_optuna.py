@@ -25,9 +25,10 @@ def record_dict_in_study(studydict, cur_dict):
     for k,v in flat_dict.items():
         studydict['study'].set_user_attr(k,v)
 
-def create_or_load_study(parser_args, seed=UC.SEED, evaluation = False):
+def create_or_load_study(parser_args, configdict, evaluation = False):
     ret = {}
 
+    seed = configdict['seed']
     cur_study_name = create_study_name(parser_args)
     sampler_dir = UMN.by_projpath(UC.SAMPLER_FOLDER, True)
     rdb_dir = UMN.by_projpath(UC.RDB_FOLDER, True)

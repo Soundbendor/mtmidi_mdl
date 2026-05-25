@@ -47,7 +47,7 @@ def get_dataset_proportions(dataset_size, num_steps = 7, train_pct = UC.TRAIN_PC
            }
     return ret
 
-def check_dataset_proportions(dataset_size, num_classes, num_steps = UC.PREQ_STEPS, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBPCT, num_class_thresh = UC.NUM_CLASS_THRESH):
+def check_dataset_proportions(dataset_size, num_classes, num_steps = 5, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBPCT, num_class_thresh = UC.NUM_CLASS_THRESH):
     prop_dict = get_dataset_proportions(dataset_size, num_steps = num_steps, train_pct = train_pct, test_subpct = test_subpct)
     breaks_on = []
     for split in ['prequential', 'train', 'test', 'dev']:
@@ -163,7 +163,6 @@ def load_data_dict(dataset):
             'label_arr': label_arr,
             'is_balanced': is_balanced,
             'train_on_middle': train_on_middle,
-            'below_class_thresh': check_class_props['below_class_thresh']
             }
     return ret
 

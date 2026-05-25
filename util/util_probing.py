@@ -9,9 +9,33 @@ import polars as pl
 import torch, torch.utils.data as TUD
 from sklearn.model_selection import train_test_split
 
+def build_config(parser_args, datadict):
+    _config = {k:v for (k,v) in vars(parser_args).items()}
+    model_shape = UMN.get_acts_shape(_config['model_size'])
+    _config['learning_rate'] = UC.LEARNING_RATE
+    _config['num_epochs'] = UC.NUM_EPOCHS
+    _config['seed'] = UC.SEED
+    _config['batch_size'] = UC.BATCH_SIZE
+    _config['is_64bit'] = UC.IS_64BIT
+    _config['model_dim'] = model_shape[1]
+    _config['model_num_layers'] = model_shape[0]
+    _config['dataloader_shuffle'] = UC.DATALOADER_SHUFFLE
+    if parser_args.expr_type == 'mlp':
+        _config['probe_hidden_dims'] = UC.MLPPROBE_HIDDEN_DIMS
+    elif parser_args.expr_type == 'linear':
+        _config['probe_hidden_dims'] = []
+    _config['early_stopping_check_interval'] = UC.EARLY_STOPPING_CHECK_INTERVAL
+    _config['early_stopping_patience'] = UC.EARLY_STOPPING_PATIENCE
+
+    _config['train_pct'] = UC.TRAIN_PCT
+    _config['test_subpct'] = UC.TEST_SUBPCT
+
+    _config['is_balanced'] = datadict['is_balanced']
+    _config['use_weights'] = UC.USE_WEIGHTS
+    return _config
 
 def get_split_idxs(datadict, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBPCT, seed = 39):
-    idxs = np.arange(datadict'[num_examples'])
+    idxs = np.arange(datadict['num_examples'])
     label = datadict['label']
     labels = datadict['df'][label].to_numpy()
     preq_all_idxs, testvalid_idxs = train_test_split(idxs, train_size = train_pct, random_state = seed, shuffle = True, stratify = labels)
@@ -28,7 +52,7 @@ def get_split_idxs(datadict, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUB
             _preq_idxs.append(train_idxs)
 
 
-    preq_all_idxs_size = preq_idxs_all.shape[0]
+    preq_all_idxs_size = preq_all_idxs.shape[0]
     preq_idxs = _preq_idxs[::-1] 
     preq_size = [x.shape[0] for x in preq_idxs]
     valid_size = valid_idxs.shape[0]
@@ -36,7 +60,7 @@ def get_split_idxs(datadict, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUB
     ret ={'preq_idxs': preq_idxs, 'preq_size': preq_size,
           'valid_idxs': valid_idxs, 'valid_size': valid_size,
           'test_idxs': test_idxs, 'test_size': test_size,
-          'preq_all_idxs': preq_idxs_all, 'preq_all_idxs_size': preq_all_idxs_size,
+          'preq_all_idxs': preq_all_idxs, 'preq_all_size': preq_all_idxs_size,
           'num_preq_steps': num_steps,
           'train_pct': train_pct,
           'test_subpct': test_subpct
@@ -57,7 +81,7 @@ def create_subsets_from_splits(dataset_obj, idx_dict):
                 if i == 1:
                     cur['train_idxs'] = idx_dict[idx_str][0]
                 else:
-                    cur['train_idxs'] = np.hstack(idx_dict[idx_str[:i]])
+                    cur['train_idxs'] = np.hstack(idx_dict[idx_str][:i])
                 cur['train_size'] = cur['train_idxs'].shape[0]
                 cur['encode_idxs'] = idx_dict[idx_str][i]
                 cur['encode_size'] = cur['encode_idxs'].shape[0]
@@ -74,20 +98,23 @@ def create_subsets_from_splits(dataset_obj, idx_dict):
     return ret
 
 def create_subsets(dataset_obj, datadict, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBPCT, seed = 39):
-    idxdict = create_splits(datadict, train_pct = train_pct, test_subpct = test_subpct, seed = seed)
+    idxdict = get_split_idxs(datadict, train_pct = train_pct, test_subpct = test_subpct, seed = seed)
     subsetdict = create_subsets_from_splits(dataset_obj, idxdict)
     return subsetdict
                 
 
 
 
-def get_preq_valid_test_subsets(dataset_obj, datadict, train_pct = UC.TRAIN_PCT, test_subpct = UC.TEST_SUBPCT, seed = UC.SPLIT_SEED):
+def get_preq_valid_test_subsets(dataset_obj, datadict, configdict):
     # default to given folds
+    train_pct = configdict['train_pct']
+    test_subpct = configdict['test_subpct']
     num_examples = datadict['num_examples']
+    seed = configdict['seed']
     num_classes = datadict['num_classes'] 
     subsetdict = create_subsets(dataset_obj, datadict, train_pct = train_pct, test_subpct = test_subpct, seed = seed)
     ret_dict = {k:v for (k,v) in subsetdict.items()}
-    ret_dict['t1logk'] = subsetdict['preq'][0]['size'] * np.log2(num_classes)
+    ret_dict['t1logk'] = subsetdict['preq'][0]['train_size'] * np.log2(num_classes)
     if datadict['is_balanced'] == False:
         cur_label = datadict['label']
         train_df = datadict['df'][subsetdict['preq_all_idxs']]
@@ -95,7 +122,7 @@ def get_preq_valid_test_subsets(dataset_obj, datadict, train_pct = UC.TRAIN_PCT,
         amount_arr = np.array([class_amounts[k] for k in datadict['label_arr']]).flatten()
         inv_class_prop = np.sum(amount_arr)/amount_arr
         ret_dict['weights'] = inv_class_prop/np.max(inv_class_prop)
-    return idx_dict
+    return ret_dict
 
 
 # input torch, output numpy
@@ -138,16 +165,16 @@ def load_model_dict(model, configdict, layer_idx, trial_number, device='cpu'):
     model.load_state_dict(torch.load(save_path, map_location=device, weights_only = False))
 
 def save_mean(cur_mean, configdict, layer_idx):
-    suffix = configdict['suffix']
-    split_str = 'train'
+    seed = configdict['seed']
+    split_str = f'sd{seed}_train'
     layer_str = f'l{layer_idx}'
     other_str = f'{layer_str}_{split_str}-mean'
     save_path = UMN.get_save_path('mean', configdict, other=other_str, make_dir = True)
     np.save(save_path, cur_mean.cpu().numpy())
 
 def load_mean(configdict, layer_idx):
-    split_str = 'train'
-
+    seed = configdict['seed']
+    split_str = f'sd{seed}_train'
     layer_str = f'l{layer_idx}'
     other_str = f'{layer_str}_{split_str}-mean'
     save_path = UMN.get_save_path('mean', configdict, other=other_str, make_dir = False)
@@ -155,39 +182,32 @@ def load_mean(configdict, layer_idx):
 
 
 def save_std(cur_std, configdict, layer_idx):
-    suffix = configdict['suffix']
-    split_str = 'train'
+    seed = configdict['seed']
+    split_str = f'sd{seed}_train'
     layer_str = f'l{layer_idx}'
     other_str = f'{layer_str}_{split_str}-std'
     save_path = UMN.get_save_path('std', configdict, other=other_str, make_dir = True)
     np.save(save_path, cur_std.cpu().numpy())
 
 def load_std(configdict, layer_idx):
-    split_str = 'train'
+    seed = configdict['seed']
+    split_str = f'sd{seed}_train'
     layer_str = f'l{layer_idx}'
     other_str = f'{layer_str}_{split_str}-std'
     save_path = UMN.get_save_path('std', configdict, other=other_str, make_dir = False)
     return np.load(save_path)
 
-def save_part_rto(cur_pr, configdict, layer_idx, is_train = True):
-    suffix = configdict['suffix']
-    split_str = 'nil'
-    if is_train == True:
-        split_str = 'train'
-    else:
-        split_str = 'test'
+def save_part_rto(cur_pr, configdict, layer_idx):
+    seed = configdict['seed']
+    split_str = f'sd{seed}_train'
     layer_str = f'l{layer_idx}'
     other_str = f'{layer_str}_{split_str}'
     save_path = UMN.get_save_path('part_rto', configdict, other=other_str, make_dir = True)
     np.save(save_path, cur_pr.cpu().numpy())
 
-def load_part_rto(configdict, layer_idx, is_train = True):
-    split_str = 'nil'
-    if is_train == True:
-        split_str = 'train'
-    else:
-        split_str = 'test'
-
+def load_part_rto(configdict, layer_idx):
+    seed = configdict['seed']
+    split_str = f'sd{seed}_train'
     layer_str = f'l{layer_idx}'
     other_str = f'{layer_str}_{split_str}'
     save_path = UMN.get_save_path('part_rto', configdict, other=other_str, make_dir = False)
