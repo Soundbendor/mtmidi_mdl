@@ -256,7 +256,7 @@ if __name__ == "__main__":
     parser.add_argument("-st", "--stats", type=strtobool, default=False, help="calculate stats")
     parser.add_argument("-pr", "--part_rto", type=strtobool, default=False, help="calculate participation ratio")
     parser.add_argument("-rs", "--restart_study", type=strtobool, default=False, help="force restart of optuna study")
-    parser.add_argument("-sh", "--from_share", type=strtobool, default=False, help="load from share partition")
+    parser.add_argument("-sh", "--from_share", type=strtobool, default=True, help="load from share partition")
     parser.add_argument("-sj", "--slurm_job", type=int, default=0, help="slurm job")
     parser.add_argument("-sf", "--suffix", type=int, default=1, help="suffix")
 
