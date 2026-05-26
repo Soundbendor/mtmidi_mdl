@@ -74,7 +74,7 @@ if __name__ == "__main__":
             script_idx += 1
             script_path = os.path.join(sh_dir, script_fname)
             script_str = "\n".join(slurm_strarr)
-            print(f"===== {args.expr_type} | {dataset} | {model_size} | STATS: {args.eval} | PR: {args.part_rto} =====")
+            print(f"===== {args.expr_type} | {dataset} | {model_size} | STATS: {args.stats} | PR: {args.part_rto} =====")
             print(f"Creating {script_fname}")
             with open(script_path, 'w') as f:
                 f.write(script_str)
