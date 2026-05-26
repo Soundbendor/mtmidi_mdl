@@ -173,6 +173,7 @@ def dict_arrayargs_to_str(cur_dict):
 def get_save_path(save_type, configdict, other=None, make_dir = True):
     ext = None
     subfolder = None
+    use_expr_type_folder = True
     dataset = configdict['dataset']
     expr_type = configdict['expr_type']
     model_size = configdict['model_size']
@@ -191,15 +192,22 @@ def get_save_path(save_type, configdict, other=None, make_dir = True):
         ext = 'model_dict'
     elif save_type == 'part_rto':
         subfolder = UC.PART_RTO_FOLDER
+        use_expr_type_folder = False
         ext = 'npy'
     elif save_type == 'mean' or save_type == 'std':
         subfolder = UC.DATA_STATS_FOLDER
+        use_expr_type_folder = False
         ext = 'npy'
     elif save_type == 'scaler64':
         subfolder = UC.SCALERS_FOLDER
+        use_expr_type_folder = False
         ext = 'scaler64_dict'
 
-    cur_path = by_projpath_multi(subpaths=[subfolder, dataset, expr_type],make_dir = make_dir)
+    cur_path = None
+    if use_expr_type_folder == False:
+        cur_path = by_projpath_multi(subpaths=[subfolder, dataset],make_dir = make_dir)
+    else:
+        cur_path = by_projpath_multi(subpaths=[subfolder, dataset, expr_type],make_dir = make_dir)
     fname = None
     if other == None:
         fname = f'{model_size}-{suffix}.{ext}'

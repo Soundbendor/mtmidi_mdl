@@ -287,7 +287,7 @@ def get_acts(model_size, cur_dataset, normalize = True, dur = 4., use_64bit = Tr
         elif 'baseline' in model_size:
             rep_arr = get_baseline_features(audio, sr=sr, feat_type=model_size)
         elif model_size == 'jukebox':
-            print(f'--- extracting jukebox for {f} with {layers_per} layers at a time ---', file=logfile_handle)
+            print(f'--- extracting jukebox for {fpath} with {layers_per} layers at a time ---', file=logfile_handle)
             # note that layers are 1-indexed in jukebox
             # so let's 0-idx and then add 1 when feeding into jukebox fn
             layer_gen = (list(range(l, min(um.model_num_layers['jukebox'], l + layers_per))) for l in range(0,um.model_num_layers['jukebox'], layers_per))
