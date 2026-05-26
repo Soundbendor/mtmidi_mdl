@@ -361,6 +361,6 @@ if __name__ == '__main__':
         lf = open(log_fpath, 'a')
         rf = open(rec_fpath, 'w')
         print(f'=== running extraction for {dataset} with {model_size} at {timestamp} ===', file=lf)
-        get_acts(model_size, dataset, normalize = normalize, dur = dur, use_64bit = use_64bit, logfile_handle=lf, recfile_handle=rf, memmap = memmap, pickup = pickup, fold_num = fold_num, from_dir = from_dir, to_dir = to_dir)
+        get_acts(model_size, dataset, normalize = normalize, dur = UC.WAV_DUR, use_64bit = use_64bit, logfile_handle=lf, recfile_handle=rf, memmap = memmap, pickup = pickup, fold_num = fold_num, from_dir = from_dir, to_dir = to_dir)
         lf.close()
         rf.close()
