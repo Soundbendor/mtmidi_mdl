@@ -2,7 +2,10 @@ from pathlib import Path
 import os
 import numpy as np
 
-
+# from https://github.com/brown-palm/syntheory/blob/4f222359e750ec55425c12809c1a0358b74fce49/embeddings/models.py#L114
+JUKEBOX_DOWNSAMP_RATE = 15
+# length of soundfile
+WAV_DUR = 4.0
 LOG2E = np.log2(np.exp(1.))
 
 NUM_FOLDS = 20

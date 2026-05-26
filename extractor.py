@@ -71,9 +71,9 @@ def get_baseline_features(audio, sr=22050, feat_type="concat"):
 def get_jukebox_layer_embeddings(fpath=None, audio = None, layers=list(range(1,73))):
     reps = None
     if fpath != None:
-        acts = jml.extract(fpath=fpath, layers=layers, duration=dur, meanpool=True, downsample_target_rate=jb_dsamp_rate, downsample_method=None)
+        acts = jml.extract(fpath=fpath, layers=layers, duration=UC.WAV_DUR, meanpool=True, downsample_target_rate=UC.JUKEBOX_DOWNSAMP_RATE, downsample_method=None)
     else:
-        acts = jml.extract(audio=audio, layers=layers, duration=dur, meanpool=True, downsample_target_rate=jb_dsamp_rate, downsample_method=None)
+        acts = jml.extract(audio=audio, layers=layers, duration=UC.WAV_DUR, meanpool=True, downsample_target_rate=UC.JUKEBOX_DOWNSAMP_RATE, downsample_method=None)
     jml.lib.empty_cache()
     return np.array([acts[i] for i in layers])
 
@@ -202,8 +202,7 @@ def get_musicgen_encoder_embeddings(model, proc, audio, meanpool = True, model_s
 
 
 def get_acts(model_size, cur_dataset, normalize = True, dur = 4., use_64bit = True, logfile_handle=None, recfile_handle = None, memmap = True, pickup = False, fold_num = -1, from_dir = "", to_dir = ""):
-   
-    layers_per = 4
+    jukebox_layer_arr = list(range(UC.MODEL_NUM_LAYERS['jukebox']))
     using_hf = cur_dataset in UC.SYNTHEORY_DATASETS
     # musicgen stuff
     device = 'cpu'
@@ -288,22 +287,16 @@ def get_acts(model_size, cur_dataset, normalize = True, dur = 4., use_64bit = Tr
         elif 'baseline' in model_size:
             rep_arr = get_baseline_features(audio, sr=sr, feat_type=model_size)
         elif model_size == 'jukebox':
-            print(f'--- extracting jukebox for {fpath} with {layers_per} layers at a time ---', file=logfile_handle)
+            print(f'--- extracting jukebox for {fpath}  ---', file=logfile_handle)
             # note that layers are 1-indexed in jukebox
             # so let's 0-idx and then add 1 when feeding into jukebox fn
-            layer_gen = (list(range(l, min(um.model_num_layers['jukebox'], l + layers_per))) for l in range(0,UMN.MODEL_NUM_LAYERS['jukebox'], layers_per))
-            has_last_layer = False
-            if layer_num > 0:
-                # 0-idx from 1-idxed argt
-                layer_gen = ([l-1] for l in [layer_num])
-            for layer_arr in layer_gen:
-                # 1-idx for passing into fn
-                j_idx = [l+1 for l in layer_arr]
-                has_last_layer = UMN.MODEL_NUM_LAYERS['jukebox'] in j_idx
-                print(f'extracting layers {j_idx}', file=logfile_handle)
-                rep_arr = get_jukebox_layer_embeddings(fpath=fpath, audio = audio, layers=j_idx)
-                emb_file[layer_arr,:] = rep_arr
-                emb_file.flush()
+
+            # 1-idx for passing into fn
+            j_idx = [l+1 for l in jukebox_layer_arr]
+            print(f'extracting layers {j_idx}', file=logfile_handle)
+            rep_arr = get_jukebox_layer_embeddings(fpath=fpath, audio = audio, layers=j_idx)
+            emb_file[jukebox_layer_arr,:] = rep_arr
+            emb_file.flush()
 
         if model_size != 'jukebox':
             if memmap == True:
