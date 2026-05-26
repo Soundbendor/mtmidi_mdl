@@ -71,8 +71,6 @@ if __name__ == "__main__":
             p_str = f"python {py_path}  -st {args.stats} -pr {args.part_rto} -ds {dataset} -et {args.expr_type} -ms {model_size} -sh {args.from_share} -wdb {args.use_wandb} -cd {args.use_cuda} -sf {args.suffix}" 
             slurm_strarr.append(p_str)
             script_fname = f"{start_time}_{job_str}.sh"
-            if args.eval == True:
-                script_fname = f'e_{script_fname}'
             script_idx += 1
             script_path = os.path.join(sh_dir, script_fname)
             script_str = "\n".join(slurm_strarr)
