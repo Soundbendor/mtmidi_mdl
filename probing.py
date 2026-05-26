@@ -289,7 +289,7 @@ if __name__ == "__main__":
             torch_gen.manual_seed(configdict['seed'])
             train_subset.dataset.set_layer_idx(layer_idx)
             cur_mean, cur_std = calculate_mean_stdev(torch_gen, train_subset, train_size, configdict['model_dim'] , shuffle = True, device=device)
-            print(layer_idx, cur_pr, cur_mean, cur_std)
+            print(layer_idx, cur_mean, cur_std)
             UP.save_mean(cur_mean, configdict, layer_idx)
             UP.save_std(cur_std, configdict, layer_idx)
     else:

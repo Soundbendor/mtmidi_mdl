@@ -250,6 +250,7 @@ def get_acts(model_size, cur_dataset, normalize = True, dur = 4., use_64bit = Tr
 
     elif 'jukebox' == model_size:
         jml.setup_models(cache_dir='/nfs/guille/eecs_research/soundbendor/kwand/jukemirlib')
+        model_sr = 44100
 
 
     # existing files removing latest (since it may be partially written) and removing extension for each of checking
@@ -353,7 +354,7 @@ if __name__ == '__main__':
     if args.from_share == True:
         from_dir = os.path.join(UC.SHARE_PATH, 'syntheory_plus')
     if args.to_share == True:
-        to_dir = os.path.join(UC.SHARE_PATH, 'mtmidi_prb')
+        to_dir = os.path.join(UC.SHARE_PATH, 'mtmidi_mdl')
     # miscellaneous logs
     log_fname = get_print_name(dataset, model_size, is_csv = False, normalize = normalize, timestamp = timestamp)
     rec_fname = get_print_name(dataset, model_size, is_csv = True, normalize = normalize, timestamp = timestamp)
