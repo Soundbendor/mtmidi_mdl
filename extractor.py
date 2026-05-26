@@ -291,7 +291,7 @@ def get_acts(model_size, cur_dataset, normalize = True, dur = 4., use_64bit = Tr
             print(f'--- extracting jukebox for {fpath} with {layers_per} layers at a time ---', file=logfile_handle)
             # note that layers are 1-indexed in jukebox
             # so let's 0-idx and then add 1 when feeding into jukebox fn
-            layer_gen = (list(range(l, min(um.model_num_layers['jukebox'], l + layers_per))) for l in range(0,um.model_num_layers['jukebox'], layers_per))
+            layer_gen = (list(range(l, min(um.model_num_layers['jukebox'], l + layers_per))) for l in range(0,UMN.MODEL_NUM_LAYERS['jukebox'], layers_per))
             has_last_layer = False
             if layer_num > 0:
                 # 0-idx from 1-idxed argt
@@ -299,7 +299,7 @@ def get_acts(model_size, cur_dataset, normalize = True, dur = 4., use_64bit = Tr
             for layer_arr in layer_gen:
                 # 1-idx for passing into fn
                 j_idx = [l+1 for l in layer_arr]
-                has_last_layer = um.model_num_layers['jukebox'] in j_idx
+                has_last_layer = UMN.MODEL_NUM_LAYERS['jukebox'] in j_idx
                 print(f'extracting layers {j_idx}', file=logfile_handle)
                 rep_arr = get_jukebox_layer_embeddings(fpath=fpath, audio = audio, layers=j_idx)
                 emb_file[layer_arr,:] = rep_arr
