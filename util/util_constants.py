@@ -5,6 +5,7 @@ import numpy as np
 
 LOG2E = np.log2(np.exp(1.))
 
+NUM_FOLDS = 20
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ACTS_FOLDER = 'acts'
 SAMPLER_FOLDER = 'samplers'
