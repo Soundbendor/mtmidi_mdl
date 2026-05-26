@@ -202,7 +202,8 @@ def get_musicgen_encoder_embeddings(model, proc, audio, meanpool = True, model_s
 
 
 def get_acts(model_size, cur_dataset, normalize = True, dur = 4., use_64bit = True, logfile_handle=None, recfile_handle = None, memmap = True, pickup = False, fold_num = -1, from_dir = "", to_dir = ""):
-    
+   
+    layers_per = 4
     using_hf = cur_dataset in UC.SYNTHEORY_DATASETS
     # musicgen stuff
     device = 'cpu'
