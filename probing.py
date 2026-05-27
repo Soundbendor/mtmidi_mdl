@@ -92,6 +92,7 @@ def valid_test_model(model, mean, stdev, generator, loss_fn, valid_subset, batch
             model_pred = model(ipt)
            
             if loss_fn != None:
+                loss = None
                 if is_classification == True:
                     loss = loss_fn(model_pred, ground_truth)
                 else:
@@ -156,14 +157,14 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
         # init optimizer and loss
         opt_fn = torch.optim.Adam(model.parameters(), lr=configdict['learning_rate'])
 
-        train_loss = None
-        valid_loss = None
+        train_loss_fn = None
+        valid_loss_fn = None
         if datadict['is_classification'] == True:
-            train_loss = nn.CrossEntropyLoss(reduction='sum')
-            valid_loss = nn.CrossEntropyLoss(reduction='sum')
+            train_loss_fn = nn.CrossEntropyLoss(reduction='sum')
+            valid_loss_fn = nn.CrossEntropyLoss(reduction='sum')
         else:
-            train_loss = nn.MSELoss(reduction='sum')
-            valid_loss = nn.MSELoss(reduction='sum')
+            train_loss_fn = nn.MSELoss(reduction='sum')
+            valid_loss_fn = nn.MSELoss(reduction='sum')
 
 
 
@@ -202,8 +203,8 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
 
         for epoch_idx in range(configdict['num_epochs']):
             # train/valid
-            train_avg_loss = train_model(model, cur_mean, cur_stdev, cur_train_size, torch_gen, opt_fn, train_loss, cur_train_subset, batch_size=configdict['batch_size'], shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
-            valid_loss, valid_truths, valid_preds = valid_test_model(model, cur_mean, cur_stdev, torch_gen, valid_loss, cur_valid_subset, batch_size=configdict['batch_size'], shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
+            train_avg_loss = train_model(model, cur_mean, cur_stdev, cur_train_size, torch_gen, opt_fn, train_loss_fn, cur_train_subset, batch_size=configdict['batch_size'], shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
+            valid_loss, valid_truths, valid_preds = valid_test_model(model, cur_mean, cur_stdev, torch_gen, valid_loss_fn, cur_valid_subset, batch_size=configdict['batch_size'], shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
 
             train_avg_nlls.append(train_avg_loss)
             # early stopping
@@ -232,7 +233,7 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
         else:
             test_nll = best_loss
 
-        test_loss, test_truths, test_preds = valid_test_model(model, cur_mean, cur_stdev, torch_gen, valid_loss, cur_test_subset, batch_size=batch_size, shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
+        test_loss, test_truths, test_preds = valid_test_model(model, cur_mean, cur_stdev, torch_gen, valid_loss_fn, cur_test_subset, batch_size=batch_size, shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
         test_metrics = UME.get_metrics(test_truths, test_preds, valid_nlls, preq_idx, layer_idx, trial_number, datadict, subsetdict, configdict, save_to_csv = True, make_cm = True)
         accum_metrics.append(test_metrics)
 
