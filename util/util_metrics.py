@@ -24,8 +24,8 @@ def accum_metrics_to_metric_dict(accum_metrics):
     return ret
 
 # 0-idxed so preq_idx == num_preq_steps is training on full training set
-def is_full_train(preq_idx, datadict):
-    return preq_idx == datadict['num_preq_steps']
+def is_full_train(preq_idx, subsetdict):
+    return preq_idx == subsetdict['num_preq_steps']
 
 def get_preq_train_prop(preq_idx, configdict):
     cur_dataset = configdict['dataset']
@@ -106,7 +106,7 @@ def get_classification_metrics(truths, preds, nll_arr, preq_idx, layer_idx, tria
     ret['f1_macro'] = SKM.f1_score(truths, preds, average='macro')
     ret['f1_micro'] = SKM.f1_score(truths, preds, average='micro')
     ret['balanced_accuracy_score'] = SKM.balanced_accuracy_score(truths, preds)
-    ret['is_full_train'] = is_full_train(preq_idx, datadict)
+    ret['is_full_train'] = is_full_train(preq_idx, subsetdict)
     ret['train_prop'] = get_preq_train_prop(preq_idx, configdict)
 
     # only save for eval
@@ -116,7 +116,7 @@ def get_classification_metrics(truths, preds, nll_arr, preq_idx, layer_idx, tria
         ret['cm'] = make_confusion_matrix(truths, preds, preq_idx, layer_idx, datadict, configdict)
     return ret
 
-def get_regression_metrics(truths, preds, nll_arr, preq_idx, layer_idx, configdict, save_to_csv = False):
+def get_regression_metrics(truths, preds, nll_arr, preq_idx, layer_idx, datadict, subsetdict, configdict, save_to_csv = False):
     metrics = ["mean_squared_error",
                "r2_score",
                "mean_absolute_error",
@@ -131,7 +131,7 @@ def get_regression_metrics(truths, preds, nll_arr, preq_idx, layer_idx, configdi
     ret['log2_nll_sum'] = calculate_log2_nll_sum(nll_arr)
     ret['online_mdl'] = subsetdict['t1logk'] + ret['log2_nll_sum']
     ret['layer_idx'] = layer_idx
-    ret['is_full_train'] = is_full_train(preq_idx, datadict)
+    ret['is_full_train'] = is_full_train(preq_idx, subsetdict)
     ret['train_prop'] = get_preq_train_prop(preq_idx, configdict)
     if save_to_csv == True:
         save_results_to_csv(ret, configdict, preq_idx, layer_idx)
@@ -141,7 +141,7 @@ def get_metrics(truths, preds, nlls, preq_idx, layer_idx, trial_number, datadict
     if datadict['is_classification'] == True:
         return get_classification_metrics(truths, preds, nlls, preq_idx, layer_idx, trial_number, datadict, subsetdict, configdict, save_to_csv = save_to_csv, make_cm = make_cm)
     else:
-        return get_regression_metrics(truths, preds, nlls, preq_idx, layer_idx, configdict, save_to_csv = save_to_csv)
+        return get_regression_metrics(truths, preds, nlls, preq_idx, layer_idx, datadict, subsetdict, configdict, save_to_csv = save_to_csv)
 
 def get_optimization_metric(metric_dict, datadict):
     ret = None
