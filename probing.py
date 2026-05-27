@@ -117,8 +117,8 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
     # other init
     using_early_stopping =  configdict['early_stopping_check_interval'] > 0
       
-    cur_mean = UP.load_mean(configdict, layer_idx)
-    cur_stdev = UP.load_std(configdict, layer_idx)
+    cur_mean = torch.from_numpy(UP.load_mean(configdict, layer_idx))
+    cur_stdev = torch.from_numpy(UP.load_std(configdict, layer_idx))
     # wandbstuff
     cur_run = None
     run_name = None
