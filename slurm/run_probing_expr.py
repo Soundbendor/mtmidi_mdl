@@ -12,7 +12,7 @@ script_idx = 0
 
 def run_sbatch_script(script_path):
     cur_idx = script_idxs[script_path]
-    print(f"Running {script_path} ({cur_idx}/{script_idx}")
+    print(f"Running {script_path} ({cur_idx}/{script_idx})")
     subprocess.run(["sbatch", "-W", f"{script_path}"])
 
 if __name__ == "__main__":
