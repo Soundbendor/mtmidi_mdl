@@ -11,16 +11,16 @@ datasets = ['notes', 'scales', 'intervals', 'simple_progressions', 'tempos', 'ch
 if len(sys.argv) > 1:
     dataset = sys.argv[1]
 
-dsdatdir = os.path.join(datdir, dataset)
 csvdir = UMN.by_projpath(subpath='csv',make_dir = False)
-csvfile = os.path.join(csvdir, f'{dataset}-metadata.csv')
-df = pl.read_csv(csvfile)
 
 #os.mkdir(dstestdir)
 
 #for model_size in UC.MODEL_NUM_LAYERS.keys():
 #for model_size in ['musicgen-large']:
 for dataset in datasets:
+    dsdatdir = os.path.join(datdir, dataset)
+    csvfile = os.path.join(csvdir, f'{dataset}-metadata.csv')
+    df = pl.read_csv(csvfile)
     for model_size in ["MERT-v1-95M", "MERT-v1-330M", "wav2vec2-base", "wav2vec2-large",'musicgen-small', 'musicgen-medium', 'musicgen-large']:
 
         for i in range(len(df)):
