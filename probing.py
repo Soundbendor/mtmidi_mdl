@@ -172,17 +172,22 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
         cur_train_subset = None
         cur_valid_subset = None
         cur_train_size = None
+        cur_valid_size = None
         if full_train == False:
-            cur_train_subset = subsetdict['preq'][i]['train_subset']
-            cur_valid_subset = subsetdict['preq'][i]['encode_subset']
-            cur_train_size = subsetdict['preq'][i]['train_size']
+            cur_train_subset = subsetdict['preq'][preq_idx]['train_subset']
+            cur_valid_subset = subsetdict['preq'][preq_idx]['encode_subset']
+            cur_train_size = subsetdict['preq'][preq_idx]['train_size']
+            cur_valid_size = subsetdict['preq'][preq_idx]['valid_size']
         else:
             cur_train_subset = subsetdict['preq_all_subset']
             cur_valid_subset = subsetdict['valid_subset']
             cur_train_size = subsetdict['preq_all_size']
+            cur_valid_size = subsetdict['valid_size']
         
         cur_train_subset.dataset.set_layer_idx(layer_idx)
         cur_valid_subset.dataset.set_layer_idx(layer_idx)
+
+        print(f'layer/preq ({layer_idx},{preq_idx}): train/valid ({train_size},{valid_size})')
 
         patience = 0
         
