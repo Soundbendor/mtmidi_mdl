@@ -141,6 +141,8 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
     train_avg_nlls = []
     actual_training_epochs = []
 
+    preq_all_size = subsetdict['preq_all_size']
+
     for preq_idx in  range(num_steps+1):
 
         # init rng
@@ -177,7 +179,7 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
             cur_train_subset = subsetdict['preq'][preq_idx]['train_subset']
             cur_valid_subset = subsetdict['preq'][preq_idx]['encode_subset']
             cur_train_size = subsetdict['preq'][preq_idx]['train_size']
-            cur_valid_size = subsetdict['preq'][preq_idx]['valid_size']
+            cur_valid_size = subsetdict['preq'][preq_idx]['encode_size']
         else:
             cur_train_subset = subsetdict['preq_all_subset']
             cur_valid_subset = subsetdict['valid_subset']
@@ -187,7 +189,10 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
         cur_train_subset.dataset.set_layer_idx(layer_idx)
         cur_valid_subset.dataset.set_layer_idx(layer_idx)
 
-        print(f'layer/preq ({layer_idx},{preq_idx}): train/valid ({train_size},{valid_size})')
+        train_pct = 100. * (cur_train_size/preq_all_size)
+        valid_pct = 100. * (cur_valid_size/preq_all_size)
+
+        print(f'layer/preq ({layer_idx},{preq_idx}): train/valid ({cur_train_size},{cur_valid_size}) ({train_pct:.4f},{valid_pct:.4f})')
 
         patience = 0
         
