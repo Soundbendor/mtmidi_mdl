@@ -24,8 +24,8 @@ def accum_metrics_to_metric_dict(accum_metrics):
     return ret
 
 # 0-idxed so preq_idx == num_preq_steps is training on full training set
-def is_full_train(preq_idx, configdict):
-    return preq_idx == configdict['num_preq_steps']
+def is_full_train(preq_idx, datadict):
+    return preq_idx == datadict['num_preq_steps']
 
 def get_preq_train_prop(preq_idx, configdict):
     cur_dataset = configdict['dataset']
@@ -106,7 +106,7 @@ def get_classification_metrics(truths, preds, nll_arr, preq_idx, layer_idx, tria
     ret['f1_macro'] = SKM.f1_score(truths, preds, average='macro')
     ret['f1_micro'] = SKM.f1_score(truths, preds, average='micro')
     ret['balanced_accuracy_score'] = SKM.balanced_accuracy_score(truths, preds)
-    ret['is_full_train'] = is_full_train(preq_idx, configdict)
+    ret['is_full_train'] = is_full_train(preq_idx, datadict)
     ret['train_prop'] = get_preq_train_prop(preq_idx, configdict)
 
     # only save for eval
@@ -131,7 +131,7 @@ def get_regression_metrics(truths, preds, nll_arr, preq_idx, layer_idx, configdi
     ret['log2_nll_sum'] = calculate_log2_nll_sum(nll_arr)
     ret['online_mdl'] = subsetdict['t1logk'] + ret['log2_nll_sum']
     ret['layer_idx'] = layer_idx
-    ret['is_full_train'] = is_full_train(preq_idx, configdict)
+    ret['is_full_train'] = is_full_train(preq_idx, datadict)
     ret['train_prop'] = get_preq_train_prop(preq_idx, configdict)
     if save_to_csv == True:
         save_results_to_csv(ret, configdict, preq_idx, layer_idx)
