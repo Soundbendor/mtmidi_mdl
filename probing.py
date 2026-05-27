@@ -135,7 +135,7 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
     run_name = None
     short_name = None
     if configdict['use_wandb'] == True:
-        param_dict = {'learning_rate_exp': configdict['learning_rate'], 'batch_size': configdict['batch_size'], 'data_norm': True, 'layer_idx': layer_idx}
+        param_dict = {'learning_rate_exp': np.log10(configdict['learning_rate']), 'batch_size': configdict['batch_size'], 'data_norm': True, 'layer_idx': layer_idx, 'seed': configdict['seed']}
         run_name, short_name = UO.get_run_and_short_names(configdict, layer_idx, param_dict) 
         cur_run = UW.init(wandbdict, {'id': run_name, 'name': short_name})
         UW.add_to_summary(cur_run, param_dict)

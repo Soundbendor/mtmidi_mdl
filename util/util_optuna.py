@@ -4,7 +4,6 @@ import optuna
 from . import util_main as UMN
 from . import util_constants as UC
 
-search_space = {}
 
 def study_callback(study, trial):
     study_sampler_path = study.user_attrs['sampler_filepath']
@@ -17,8 +16,8 @@ def get_layer_search_space(model_size):
     ret = list(range(num_layers))
     return ret
 
-def create_study_name(parser_args):
-    return f'{parser_args.expr_type}-{parser_args.dataset}_{parser_args.model_size}-{parser_args.suffix}'
+def create_study_name(parser_args, seed):
+    return f'{parser_args.expr_type}-{parser_args.dataset}_{parser_args.model_size}-s{seed}-{parser_args.suffix}'
 
 def record_dict_in_study(studydict, cur_dict):
     flat_dict = UMN.dict_arrayargs_to_str(cur_dict)
@@ -29,7 +28,7 @@ def create_or_load_study(parser_args, configdict, evaluation = False):
     ret = {}
 
     seed = configdict['seed']
-    cur_study_name = create_study_name(parser_args)
+    cur_study_name = create_study_name(parser_args, seed)
     sampler_dir = UMN.by_projpath(UC.SAMPLER_FOLDER, True)
     rdb_dir = UMN.by_projpath(UC.RDB_FOLDER, True)
     sampler_filepath = os.path.join(sampler_dir, f'{cur_study_name}.pkl')
@@ -47,11 +46,7 @@ def create_or_load_study(parser_args, configdict, evaluation = False):
     ret['study_seed'] = seed
 
     if cur_sampler == None:
-        cur_search_space = None
-        if parser_args.model_size in UC.SINGLE_LAYER_MODELS:
-            cur_search_space = {k:v for (k,v) in singlelayer_search_space.items()}
-        else:
-            cur_search_space = {k:v for (k,v) in multilayer_search_space.items()}
+        cur_search_space = {}
         cur_search_space['layer_idx'] = get_layer_search_space(parser_args.model_size) 
         cur_sampler = optuna.samplers.GridSampler(cur_search_space, seed=seed)
 
@@ -64,13 +59,14 @@ def create_or_load_study(parser_args, configdict, evaluation = False):
 def get_run_name(configdict, layer_idx, other = None, is_short = False):
     _dataset = configdict['dataset']
     suffix = configdict['suffix']
+    seed = configdict['seed']
     _model_size = configdict['model_size']
     if is_short == True:
         _dataset = UC.DATASET_SHORT[_dataset]
         _model_size = UC.MODEL_SIZES_SHORT[_model_size]
     ret = None
     if other == None:
-        ret = f'{_dataset}_{_model_size}_l{layer_idx}-{suffix}'
+        ret = f'{_dataset}_{_model_size}_l{layer_idx}_s{seed}-{suffix}'
     else:
         ret = f'{_dataset}_{_model_size}_l{layer_idx}_{other}-{suffix}'
     return ret 
@@ -103,6 +99,12 @@ def learning_rate_string_format(lr_exp, is_short = False ):
     else: 
         return f'lr{lr_int}'
 
+#format string to make learning rate be appendable to a run name
+def seed_string_format(seed, is_short = False ):
+    if is_short == False:
+        return f'seed{seed}'
+    else: 
+        return f's{seed}'
 
 def get_run_and_short_names(configdict, layer_idx, name_params):
     other_long_arr = []
@@ -128,6 +130,13 @@ def get_run_and_short_names(configdict, layer_idx, name_params):
         dnorm_short = data_norm_string_format(name_params['data_norm'] , is_short = True)
         other_long_arr.append(dnorm_long)
         other_short_arr.append(dnorm_short)
+    
+    if 'seed' in name_params.keys():
+        seed_long = seed_string_format(name_params['seed'] , is_short = False)
+        seed_short = seed_string_format(name_params['seed'] , is_short = True)
+        other_long_arr.append(seed_long)
+        other_short_arr.append(seed_short)
+
 
 
     other_long = '_'.join(other_long_arr)
