@@ -111,19 +111,6 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
     layer_idx = trial.suggest_categorical('layer_idx', list(range(configdict['model_num_layers'])))
      
    
-    # init model
-    # init opt/loss
-
-    opt_fn = torch.optim.Adam(model.parameters(), lr=configdict['learning_rate'])
-
-    train_loss = None
-    valid_loss = None
-    if datadict['is_classification'] == True:
-        train_loss = nn.CrossEntropyLoss(reduction='sum')
-        valid_loss = nn.CrossEntropyLoss(reduction='sum')
-    else:
-        train_loss = nn.MSELoss(reduction='sum')
-        valid_loss = nn.MSELoss(reduction='sum')
 
     # other init
     using_early_stopping =  configdict['early_stopping_check_interval'] > 0
@@ -141,8 +128,9 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
         UW.add_to_summary(cur_run, param_dict)
 
     num_steps = subsetdict['num_preq_steps']
-    # now for the actual train/valid loops
 
+
+    # now for the actual train/valid loops
     cur_test_subset = subsetdict['test_subset']
     cur_test_subset.dataset.set_layer_idx(layer_idx)
     
@@ -159,8 +147,25 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
         torch_gen = torch.Generator(device=device)
         torch_gen.manual_seed(configdict['seed'])
         set_seed(configdict['seed'])
+
+        # init model
         model = MLPProbe(in_dim =configdict['model_dim'], out_dim = datadict['num_classes'], hidden_dims = configdict['probe_hidden_dims'])
-        
+
+        # init optimizer and loss
+        opt_fn = torch.optim.Adam(model.parameters(), lr=configdict['learning_rate'])
+
+        train_loss = None
+        valid_loss = None
+        if datadict['is_classification'] == True:
+            train_loss = nn.CrossEntropyLoss(reduction='sum')
+            valid_loss = nn.CrossEntropyLoss(reduction='sum')
+        else:
+            train_loss = nn.MSELoss(reduction='sum')
+            valid_loss = nn.MSELoss(reduction='sum')
+
+
+
+        # setting subsets
         full_train = False
         if preq_idx == num_steps:
             full_train = True
