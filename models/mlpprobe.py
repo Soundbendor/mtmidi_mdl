@@ -17,13 +17,13 @@ class MLPProbe(nn.Module):
         hidden_idx = 0
         relu_idx = 0
         for hidden_dim in hidden_dims:
-            cur_layers.append( (f'linear_{hidden_idx}', nn.Linear(prev_dim, hidden_dim)) )
+            cur_layers.append( (f'linear_{hidden_idx}', nn.Linear(prev_dim, hidden_dim, bias = True)) )
             cur_layers.append( (f'relu_{relu_idx}', nn.ReLU()) )
             prev_dim = hidden_dim
             hidden_idx += 1
             relu_idx += 1
 
-        cur_layers.append( (f'linear_{hidden_idx}', nn.Linear(prev_dim, out_dim)) )
+        cur_layers.append( (f'linear_{hidden_idx}', nn.Linear(prev_dim, out_dim, bias = True)) )
         self.layers = nn.Sequential(OrderedDict(cur_layers))
 
     def forward(self, x):
