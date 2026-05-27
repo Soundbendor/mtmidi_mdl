@@ -7,8 +7,12 @@ from distutils.util import strtobool
 import os, time, subprocess
 from concurrent.futures import ThreadPoolExecutor
 
+script_idxs = {}
+script_idx = 0
+
 def run_sbatch_script(script_path):
-    print(f"Running {script_path}")
+    cur_idx = script_idxs[script_path]
+    print(f"Running {script_path} ({cur_idx}/{script_idx}")
     subprocess.run(["sbatch", "-W", f"{script_path}"])
 
 if __name__ == "__main__":
@@ -44,7 +48,6 @@ if __name__ == "__main__":
     py_path = os.path.join(project_root, 'probing.py')
 
 
-    script_idx = 0
     start_time = str(int(time.time() * 1000))
 
     expr_short = UC.EXPR_SHORT[args.expr_type] 
@@ -71,15 +74,16 @@ if __name__ == "__main__":
             p_str = f"python {py_path}  -st {args.stats} -pr {args.part_rto} -ds {dataset} -et {args.expr_type} -ms {model_size} -sh {args.from_share} -wdb {args.use_wandb} -cd {args.use_cuda} -sf {args.suffix}" 
             slurm_strarr.append(p_str)
             script_fname = f"{start_time}_{job_str}.sh"
-            script_idx += 1
             script_path = os.path.join(sh_dir, script_fname)
             script_str = "\n".join(slurm_strarr)
+            script_idx += 1
             print(f"===== {args.expr_type} | {dataset} | {model_size} | STATS: {args.stats} | PR: {args.part_rto} =====")
             print(f"Creating {script_fname}")
             with open(script_path, 'w') as f:
                 f.write(script_str)
             subprocess.run(["chmod", "u+x", f"{script_path}"])
             scripts.append(script_path)
+            script_idxs[script_path] = script_idx
 
     with ThreadPoolExecutor(max_workers=args.num_jobs) as executor:
         executor.map(run_sbatch_script, scripts)
