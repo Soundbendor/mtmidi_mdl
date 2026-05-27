@@ -108,6 +108,7 @@ def valid_test_model(model, mean, stdev, generator, loss_fn, valid_subset, batch
 def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu'):
 
     
+    trial_number = trial.number
 
     layer_idx = trial.suggest_categorical('layer_idx', list(range(configdict['model_num_layers'])))
      
