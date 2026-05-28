@@ -117,8 +117,8 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
     # other init
     using_early_stopping =  configdict['early_stopping_check_interval'] > 0
       
-    cur_mean = torch.from_numpy(UP.load_mean(configdict, layer_idx))
-    cur_stdev = torch.from_numpy(UP.load_std(configdict, layer_idx))
+    cur_mean = torch.from_numpy(UP.load_mean(configdict, layer_idx)).to(device)
+    cur_stdev = torch.from_numpy(UP.load_std(configdict, layer_idx)).to(device)
     # wandbstuff
     cur_run = None
     run_name = None
@@ -284,7 +284,7 @@ if __name__ == "__main__":
     if args.use_cuda == True and torch.cuda.is_available() == True:
         device = 'cuda'
         torch.cuda.empty_cache()
-        torch.set_default_device(device)
+        torch.set_default_device(device_
     from_dir = ""
     if args.from_share == True:
         from_dir = os.path.join(UC.SHARE_PATH, 'mtmidi_mdl')
