@@ -21,7 +21,10 @@ def by_projpath(subpath=None,make_dir = False, other_projdir = ''):
     if subpath != None:
         cur_path = os.path.join(cur_path, subpath)
         if os.path.exists(cur_path) == False and make_dir == True:
-            os.makedirs(cur_path)
+            try:
+                os.makedirs(cur_path)
+            except:
+                print('folder already exists, not creating')
     return cur_path
 
 # multisubfolder by_projpath
@@ -30,7 +33,10 @@ def by_projpath_multi(subpaths=[],make_dir = False):
     for subpath in subpaths:
         cur_path = os.path.join(cur_path, subpath)
         if os.path.exists(cur_path) == False and make_dir == True:
-            os.makedirs(cur_path)
+            try:
+                os.makedirs(cur_path)
+            except:
+                print('folder already exists, not creating')
     return cur_path
 
 ### new stuff
