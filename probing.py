@@ -284,7 +284,7 @@ if __name__ == "__main__":
     if args.use_cuda == True and torch.cuda.is_available() == True:
         device = 'cuda'
         torch.cuda.empty_cache()
-        torch.set_default_device(device_
+        torch.set_default_device(device)
     from_dir = ""
     if args.from_share == True:
         from_dir = os.path.join(UC.SHARE_PATH, 'mtmidi_mdl')
