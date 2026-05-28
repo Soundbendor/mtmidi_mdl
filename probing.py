@@ -256,7 +256,7 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
     if configdict['use_wandb'] == True:
         UW.log_array(cur_run, 'train_avg_nll', train_avg_nlls)
         UW.finish_run(cur_run)
-    return online_mdl
+    return metric_dict['online_mdl']
 
             
 
