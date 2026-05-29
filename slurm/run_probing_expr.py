@@ -18,10 +18,10 @@ def run_sbatch_script(script_path):
 if __name__ == "__main__":
     #### arg parsing
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-ds", "--datasets", nargs="+", type=str, default=["polyrhythms"], help="datasets")
+    parser.add_argument("-ds", "--datasets", nargs="+", type=str, default=["polyrhythms", "secondary_dominants", "dynamics", "seventh_chords", "mode_mixture", "time_signatures", "notes", "scales", "intervals", "simple_progressions", "chords"], help="datasets")
     parser.add_argument("-nd", "--num_days", type=int, default=1, help="number of days")
     parser.add_argument("-pt", "--partition", type=str, default="preempt", help="partition to run on")
-    parser.add_argument("-ms", "--model_sizes", nargs="+", type=str, default=["MERT-v1-95M", "MERT-v1-330M", "wav2vec2-base", "wav2vec2-large", "musicgen-small", "musicgen-medium", "musicgen-large", "jukebox"], help="musicgen-small/musicgen-medium/musicgen-large/jukebox/MERT-v1-95M/MERT-v1-330M/wav2vec2-base/wav2vec2-large")
+    parser.add_argument("-ms", "--model_sizes", nargs="+", type=str, default=["MERT-v1-95M", "MERT-v1-330M", "wav2vec2-base", "wav2vec2-large", "musicgen-small", "musicgen-medium", "musicgen-large"], help="musicgen-small/musicgen-medium/musicgen-large/jukebox/MERT-v1-95M/MERT-v1-330M/wav2vec2-base/wav2vec2-large")
     parser.add_argument("-et", "--expr_type", type=str, default="mlp", help="experiment type")
     parser.add_argument("-wdb", "--use_wandb", type=strtobool, default=True, help="sync to wandb")
     parser.add_argument("-cd", "--use_cuda", type=strtobool, default=True, help="use cuda")
