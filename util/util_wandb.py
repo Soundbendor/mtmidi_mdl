@@ -17,11 +17,16 @@ from . import util_constants as UC
 
 entity='soundbendor'
 cur_dir = os.path.dirname(os.path.realpath(__file__))
-def login():
+
+def get_key():
     _key = ''
     with open(os.path.join(cur_dir, 'wandbkey'), 'r') as f:
         _tmp = f.readlines()
         _key = _tmp[0].strip()
+    return _key
+
+def login():
+    _key = get_key()
     wandb.login(key = _key)
 
 # call directly for standard_scaler
@@ -33,6 +38,7 @@ def init(wdict, override = None):
                 'project': wdict['project'],
                 'dir': wdict['dir'],
                 'id': wdict['id'],
+                'force': True,
                 'name': wdict['name'],
                 'config': wdict['config'],
                 'settings': wdict['settings'],
@@ -41,6 +47,10 @@ def init(wdict, override = None):
                 }
 
     try:
+        _key = get_key()
+        # hacky ping
+        api = wandb.Api(api_key = _key, timeout = WANDB_PING_TIMEOUT)
+        viewer = api.viewer()
         run = wandb.init(**cur_args)
         print('wandb init in ONLINE mode')
     except:
