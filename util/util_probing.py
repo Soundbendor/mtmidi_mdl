@@ -17,6 +17,7 @@ def build_config(parser_args, datadict):
     _config['seed'] = UC.SEED
     _config['batch_size'] = UC.BATCH_SIZE
     _config['is_64bit'] = UC.IS_64BIT
+    _config['patience_delta'] = UC.PATIENCE_DELTA
     _config['model_dim'] = model_shape[1]
     _config['model_num_layers'] = model_shape[0]
     _config['dataloader_shuffle'] = UC.DATALOADER_SHUFFLE

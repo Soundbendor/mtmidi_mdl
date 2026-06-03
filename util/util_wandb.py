@@ -47,10 +47,10 @@ def init(wdict, override = None):
                 }
 
     try:
-        _key = get_key()
+        #_key = get_key()
         # hacky ping
-        api = wandb.Api(api_key = _key, timeout = WANDB_PING_TIMEOUT)
-        viewer = api.viewer()
+        #api = wandb.Api(api_key = _key, timeout = WANDB_PING_TIMEOUT)
+        #viewer = api.viewer()
         run = wandb.init(**cur_args)
         print('wandb init in ONLINE mode')
     except:
@@ -61,7 +61,7 @@ def init(wdict, override = None):
 
 
 def build_initdict(parser_args, _config):
-    _d = {'entity': entity, 'project': f'online_mdl-{parser_args.expr_type}', 'dir': UC.WANDB_PATH, 'settings': wandb.Settings(init_timeout=120)}
+    _d = {'entity': entity, 'project': f'mdl_preq-{parser_args.expr_type}', 'dir': UC.WANDB_PATH, 'settings': wandb.Settings(init_timeout=120)}
     _d['config'] = _config
     return _d
 

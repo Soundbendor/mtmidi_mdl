@@ -214,7 +214,7 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
             else:
                 last_epoch = epoch_idx == (configdict['num_epochs'] - 1)
                 if epoch_idx % configdict['early_stopping_check_interval'] == 0:
-                    if valid_loss < best_loss:
+                    if valid_loss < np.max([(best_loss - configdict['patience_delta']), 0.]):
                         best_loss = valid_loss
                         patience = 0
                         best_model_dict = copy.deepcopy(model.state_dict())
@@ -244,8 +244,10 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
     for k,v in metric_dict.items():
         trial.set_user_attr(key=k, value=v)
     
+    final_mdl = metric_dict['online_mdl'][-1]
     trial.set_user_attr(key='valid_nlls', value = valid_nlls)
     trial.set_user_attr(key='test_nll', value = test_nll)
+    trial.set_user_attr(key='final_mdl', value = final_mdl)
     trial.set_user_attr(key='train_avg_nlls', value = train_avg_nlls)
     trial.set_user_attr(key='actual_training_epochs', value = actual_training_epochs)
     
@@ -256,7 +258,7 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
     if configdict['use_wandb'] == True:
         UW.log_array(cur_run, 'train_avg_nll', train_avg_nlls)
         UW.finish_run(cur_run)
-    return metric_dict['online_mdl']
+    return final_mdl
 
             
 
