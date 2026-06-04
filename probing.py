@@ -45,8 +45,41 @@ def calculate_mean_stdev(generator, train_subset, train_size, emb_dim, shuffle =
 
 
 
+def calculate_biased_participation_ratio(generator, train_subset, train_size, cur_mean, cur_std, emb_dim, nstd = False, shuffle = True, device='cpu'):
+    train_dl = TUD.DataLoader(train_subset, batch_size = train_size, shuffle=shuffle, generator=generator)
+    
+    _mean = None
+    _std = None
 
-def train_model(model, mean, stdev, train_size, generator, opt_fn, loss_fn, train_subset, batch_size=64, shuffle = True, is_classification = True, device='cpu'):
+    with torch.no_grad():
+        for batch_idx, data in enumerate(train_dl):
+            _ipt, ground_truth = data
+            if _ipt.shape[0] != train_size:
+                print(f'did not load entire split of size {train_size}')
+                break
+
+            ipt = None
+            if nstd == False:
+                ipt = (_ipt - mean)/stdev
+            else:
+                ipt = (_ipt - mean)
+
+
+        
+            cur_cov = (ipt.T @ ipt)/(train_size - 1)
+            if cur_cov.shape[0] != emb_dim or cur_cov.shape[1] != emb_dim:
+                print(f'cov matrix did not match emb_dim of size {emb_dim}')
+            cur_cov2 = cur_cov @ cur_cov
+            if cur_cov2.shape[0] != emb_dim or cur_cov2.shape[1] != emb_dim:
+                print(f'cov*cov matrix did not match emb_dim of size {emb_dim}')
+            cur_nom = torch.pow(torch.trace(cur_cov), 2)
+            cur_denom = torch.trace(cur_cov2)
+            ret = cur_nom/cur_denom
+    return ret
+
+
+
+def train_model(model, mean, stdev, train_size, generator, opt_fn, loss_fn, train_subset, nstd = False, batch_size=64, shuffle = True, is_classification = True, device='cpu'):
     train_dl = TUD.DataLoader(train_subset, batch_size = batch_size, shuffle=shuffle, generator=generator)
     
     total_loss = 0.
@@ -55,7 +88,11 @@ def train_model(model, mean, stdev, train_size, generator, opt_fn, loss_fn, trai
     for batch_idx, data in enumerate(train_dl):
         opt_fn.zero_grad() 
         _ipt, ground_truth = data
-        ipt = (_ipt - mean)/stdev
+        ipt = None
+        if nstd == False:
+            ipt = (_ipt - mean)/stdev
+        else:
+            ipt = (_ipt - mean)
 
 
         model_pred = model(ipt)
@@ -72,7 +109,7 @@ def train_model(model, mean, stdev, train_size, generator, opt_fn, loss_fn, trai
         total_loss += (cur_loss/train_size)
     return total_loss 
 
-def valid_test_model(model, mean, stdev, generator, loss_fn, valid_subset, batch_size=64, shuffle = True, is_classification = True, device='cpu'):
+def valid_test_model(model, mean, stdev, generator, loss_fn, valid_subset, nstd = False, batch_size=64, shuffle = True, is_classification = True, device='cpu'):
     valid_dl = TUD.DataLoader(valid_subset, batch_size = batch_size, shuffle=shuffle, generator=generator)
     
     total_loss = 0.
@@ -86,7 +123,12 @@ def valid_test_model(model, mean, stdev, generator, loss_fn, valid_subset, batch
         for batch_idx, data in enumerate(valid_dl):
             
             _ipt, ground_truth = data
-            ipt = (_ipt - mean)/stdev
+            ipt = None
+            if  nstd == False:
+                ipt = (_ipt - mean)/stdev
+            else:
+                ipt = (_ipt - mean)
+
 
 
             model_pred = model(ipt)
@@ -204,8 +246,8 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
 
         for epoch_idx in range(configdict['num_epochs']):
             # train/valid
-            train_avg_loss = train_model(model, cur_mean, cur_stdev, cur_train_size, torch_gen, opt_fn, train_loss_fn, cur_train_subset, batch_size=configdict['batch_size'], shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
-            valid_loss, valid_truths, valid_preds = valid_test_model(model, cur_mean, cur_stdev, torch_gen, valid_loss_fn, cur_valid_subset, batch_size=configdict['batch_size'], shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
+            train_avg_loss = train_model(model, cur_mean, cur_stdev, cur_train_size, torch_gen, opt_fn, train_loss_fn, cur_train_subset, nstd=configdict['nonstandard'], batch_size=configdict['batch_size'], shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
+            valid_loss, valid_truths, valid_preds = valid_test_model(model, cur_mean, cur_stdev, torch_gen, valid_loss_fn, cur_valid_subset, nstd=configdict['nonstandard'], batch_size=configdict['batch_size'], shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
 
             train_avg_nlls.append(train_avg_loss)
             # early stopping
@@ -234,7 +276,7 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
         else:
             test_nll = best_loss
 
-        test_loss, test_truths, test_preds = valid_test_model(model, cur_mean, cur_stdev, torch_gen, valid_loss_fn, cur_test_subset, batch_size=configdict['batch_size'], shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
+        test_loss, test_truths, test_preds = valid_test_model(model, cur_mean, cur_stdev, torch_gen, valid_loss_fn, cur_test_subset, nstd = configdict['nonstandard'], batch_size=configdict['batch_size'], shuffle = configdict['dataloader_shuffle'], is_classification = datadict['is_classification'], device=device)
         test_metrics = UME.get_metrics(test_truths, test_preds, valid_nlls, preq_idx, layer_idx, trial_number, datadict, subsetdict, configdict, save_to_csv = True, make_cm = True)
         accum_metrics.append(test_metrics)
 
@@ -273,7 +315,9 @@ if __name__ == "__main__":
     parser.add_argument("-wdb", "--use_wandb", type=strtobool, default=True, help="sync to wandb")
     parser.add_argument("-cd", "--use_cuda", type=strtobool, default=True, help="use cuda")
     parser.add_argument("-st", "--stats", type=strtobool, default=False, help="calculate stats")
-    parser.add_argument("-pr", "--part_rto", type=strtobool, default=False, help="calculate participation ratio")
+    parser.add_argument("-bpr", "--biased_part_rto", type=strtobool, default=False, help="calculate biased participation ratio")
+    parser.add_argument("-upr", "--unbiased_part_rto", type=strtobool, default=False, help="calculate biased participation ratio")
+    parser.add_argument("-nstd", "--nonstandard", type=strtobool, default = False, help="do not divide data by feature-wise standard deviation")
     parser.add_argument("-rs", "--restart_study", type=strtobool, default=False, help="force restart of optuna study")
     parser.add_argument("-sh", "--from_share", type=strtobool, default=True, help="load from share partition")
     parser.add_argument("-sj", "--slurm_job", type=int, default=0, help="slurm job")
@@ -311,6 +355,20 @@ if __name__ == "__main__":
             print(layer_idx, cur_mean, cur_std)
             UP.save_mean(cur_mean, configdict, layer_idx)
             UP.save_std(cur_std, configdict, layer_idx)
+    elif args.biased_part_rto == True:
+        train_subset = subsetdict['preq_all_subset']
+        train_size = subsetdict['preq_all_size']
+        for layer_idx in range(configdict['model_num_layers']): 
+            torch_gen = torch.Generator(device=device)
+            torch_gen.manual_seed(configdict['seed'])
+            train_subset.dataset.set_layer_idx(layer_idx)
+
+            cur_mean = torch.from_numpy(UP.load_mean(configdict, layer_idx)).to(device)
+            cur_stdev = torch.from_numpy(UP.load_std(configdict, layer_idx)).to(device)
+            cur_bpr = calculate_biased_participation_ratio(torch_gen, train_subset, train_size, cur_mean, cur_std, configdict['model_dim'] , nstd = configdict['nonstandard'], shuffle = True, device=device)
+            print(layer_idx, cur_bpr)
+            UP.save_biased_part_rto(cur_bpr, configdict, layer_idx)
+
     else:
         # TRAINING ==========
         if args.use_wandb == True:

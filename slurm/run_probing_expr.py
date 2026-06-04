@@ -25,7 +25,10 @@ if __name__ == "__main__":
     parser.add_argument("-et", "--expr_type", type=str, default="mlp", help="experiment type")
     parser.add_argument("-wdb", "--use_wandb", type=strtobool, default=True, help="sync to wandb")
     parser.add_argument("-cd", "--use_cuda", type=strtobool, default=True, help="use cuda")
-    parser.add_argument("-pr", "--part_rto", type=strtobool, default=False, help="calculate participation ratio")
+    parser.add_argument("-bpr", "--biased_part_rto", type=strtobool, default=False, help="calculate biased participation ratio")
+    parser.add_argument("-upr", "--unbiased_part_rto", type=strtobool, default=False, help="calculate biased participation ratio")
+    parser.add_argument("-nstd", "--nonstandard", type=strtobool, default = False, help="do not divide data by feature-wise standard deviation")
+
     parser.add_argument("-st", "--stats", type=strtobool, default=False, help="calculate stats")
     parser.add_argument("-rs", "--restart_study", type=strtobool, default=False, help="force restart of optuna study")
     parser.add_argument("-sh", "--from_share", type=strtobool, default=True, help="load from share partition")

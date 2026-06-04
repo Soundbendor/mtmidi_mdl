@@ -86,7 +86,8 @@ def make_confusion_matrix(truths, preds, preq_idx, layer_idx, datadict, configdi
     ax.set_title(title)
     fig.tight_layout()
     other_str = get_save_other_str(preq_idx, layer_idx)
-    save_path = UMN.get_save_path('cm', configdict, other=other_str, make_dir = True) 
+    res_path = 'cm'
+    save_path = UMN.get_save_path(res_path, configdict, other=other_str, make_dir = True) 
     plt.savefig(save_path)
     plt.clf()
     return cmd.confusion_matrix

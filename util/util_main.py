@@ -183,21 +183,35 @@ def get_save_path(save_type, configdict, other=None, make_dir = True):
     dataset = configdict['dataset']
     expr_type = configdict['expr_type']
     model_size = configdict['model_size']
+    is_nonstandard = configdict['nonstandard']
     suffix = configdict['suffix']
     if save_type == 'cm':
-        subfolder = UC.CM_FOLDER
+        if is_nonstandard == False:
+            subfolder = UC.CM_FOLDER
+        else:
+            subfolder = UC.CM_NONSTANDARD_FOLDER
         ext = 'png'
     elif save_type == 'res':
-        subfolder = UC.RESULTS_FOLDER
-        ext = 'csv'
-    elif save_type == 'res_train':
-        subfolder = UC.RESULTS_TRAIN_FOLDER
+        if is_nonstandard == False:
+            subfolder = UC.RESULTS_FOLDER
+        else:
+            subfolder = UC.RESULTS_NONSTANDARD_FOLDER
         ext = 'csv'
     elif save_type == 'model':
         subfolder = UC.MODELS_FOLDER
         ext = 'model_dict'
-    elif save_type == 'part_rto':
-        subfolder = UC.PART_RTO_FOLDER
+    elif save_type == 'b_pr':
+        if is_nonstandard == False:
+            subfolder = UC.BIASED_PART_RTO_FOLDER
+        else:
+            subfolder = UC.BIASED_PART_RTO_NONSTANDARD_FOLDER
+        use_expr_type_folder = False
+        ext = 'npy'
+    elif save_type == 'ub_pr':
+        if is_nonstandard == False:
+            subfolder = UC.UNBIASED_PART_RTO_FOLDER
+        else:
+            subfolder = UC.UNBIASED_PART_RTO_NONSTANDARD_FOLDER
         use_expr_type_folder = False
         ext = 'npy'
     elif save_type == 'mean' or save_type == 'std':
