@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
     start_time = str(int(time.time() * 1000))
     
-    using_part_rto = args.unbiased_part_rto == True or args.biased_part_rto == True: 
+    using_part_rto = args.unbiased_part_rto == True or args.biased_part_rto == True 
     expr_short = UC.EXPR_SHORT[args.expr_type] 
     for dataset in args.datasets:
         ds_short = UC.DATASET_SHORT[dataset]
