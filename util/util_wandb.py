@@ -61,7 +61,7 @@ def init(wdict, override = None):
 
 
 def build_initdict(parser_args, _config):
-    _d = {'entity': entity, 'project': f'onlinemdl_preq-{parser_args.expr_type}', 'dir': UC.WANDB_PATH, 'settings': wandb.Settings(init_timeout=120)}
+    _d = {'entity': entity, 'project': f'online-mt_mdl-{parser_args.expr_type}', 'dir': UC.WANDB_PATH, 'settings': wandb.Settings(init_timeout=120)}
     _d['config'] = _config
     return _d
 
