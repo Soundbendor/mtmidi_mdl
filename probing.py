@@ -365,7 +365,7 @@ if __name__ == "__main__":
 
             cur_mean = torch.from_numpy(UP.load_mean(configdict, layer_idx)).to(device)
             cur_stdev = torch.from_numpy(UP.load_std(configdict, layer_idx)).to(device)
-            cur_bpr = calculate_biased_participation_ratio(torch_gen, train_subset, train_size, cur_mean, cur_std, configdict['model_dim'] , nstd = configdict['nonstandard'], shuffle = True, device=device)
+            cur_bpr = calculate_biased_participation_ratio(torch_gen, train_subset, train_size, cur_mean, cur_stdev, configdict['model_dim'] , nstd = configdict['nonstandard'], shuffle = True, device=device)
             print(layer_idx, cur_bpr)
             UP.save_biased_part_rto(cur_bpr, configdict, layer_idx)
 
