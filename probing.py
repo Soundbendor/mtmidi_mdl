@@ -45,11 +45,9 @@ def calculate_mean_stdev(generator, train_subset, train_size, emb_dim, shuffle =
 
 
 
-def calculate_biased_participation_ratio(generator, train_subset, train_size, cur_mean, cur_std, emb_dim, nstd = False, shuffle = True, device='cpu'):
+def calculate_biased_participation_ratio(generator, train_subset, train_size, cur_mean, cur_stdev, emb_dim, nstd = False, shuffle = True, device='cpu'):
     train_dl = TUD.DataLoader(train_subset, batch_size = train_size, shuffle=shuffle, generator=generator)
     
-    _mean = None
-    _std = None
 
     with torch.no_grad():
         for batch_idx, data in enumerate(train_dl):
@@ -60,9 +58,9 @@ def calculate_biased_participation_ratio(generator, train_subset, train_size, cu
 
             ipt = None
             if nstd == False:
-                ipt = (_ipt - mean)/stdev
+                ipt = (_ipt - cur_mean)/cur_stdev
             else:
-                ipt = (_ipt - mean)
+                ipt = (_ipt - cur_mean)
 
 
         
