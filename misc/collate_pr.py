@@ -67,7 +67,7 @@ for bpr_type, bpr_name in bpr_names.items():
     for m in models:
         cur_res = {}
         num_layers = UC.MODEL_NUM_LAYERS[m]
-        cur_x = np.arange(num_layers)+1
+        cur_x = np.arange(num_layers)
         for ds in dses:
             cur_res[ds] = res[bpr_type][ds][m]
         plot_per_model_across_ds(cur_x, bpr_type, bpr_name, m, cur_res)
@@ -135,7 +135,7 @@ for m in models:
         for bpr_type, bpr_name in bpr_names.items():
             cur_res[bpr_type] = (bpr_name, res[bpr_type][ds][m])
         num_layers = UC.MODEL_NUM_LAYERS[m]
-        cur_x = np.arange(num_layers)+1
+        cur_x = np.arange(num_layers)
         plot_per_model_per_ds_across_bpr(cur_x, ds, m, cur_res)
 
 
