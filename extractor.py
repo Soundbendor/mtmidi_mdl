@@ -293,7 +293,7 @@ def get_acts(model_size, cur_dataset, normalize = True, dur = UC.WAV_DUR, use_64
             # 1-idx for passing into fn
             j_idx = [l+1 for l in jukebox_layer_arr]
             print(f'extracting layers {j_idx}', file=logfile_handle)
-            rep_arr = get_jukebox_layer_embeddings(fpath=fpath, audio = audio_ipt, dur = dur, layers=j_idx)
+            rep_arr = get_jukebox_layer_embeddings(fpath=None, audio = audio_ipt, dur = dur, layers=j_idx)
             emb_file[jukebox_layer_arr,:] = rep_arr
             emb_file.flush()
 

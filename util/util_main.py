@@ -80,7 +80,8 @@ def filepath_list(file_dir, fold_num=-1, ignore_exts = set(['.csv'])):
     elif fold_num == 0:
         for i in range(1,UC.NUM_FOLDS+1):
             fold_dir = os.path.join(file_dir, f'fold_{i}')
-            cur_files = [os.path.join(fold_dir, x) for x in os.listdir(fold_dir) if os.path.splitext(x)[-1] not in ignore_exts]
+            if os.path.exists(fold_dir) == True: 
+                cur_files = [os.path.join(fold_dir, x) for x in os.listdir(fold_dir) if os.path.splitext(x)[-1] not in ignore_exts]
             files += cur_files
     else:
         fold_dir = os.path.join(file_dir, f'fold_{fold_num}')
