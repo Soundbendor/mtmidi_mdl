@@ -145,6 +145,64 @@ def valid_test_model(model, mean, stdev, generator, loss_fn, valid_subset, nstd 
 
     return total_loss, truths, preds
 
+
+def calc_twonn_curve(layer_idx, datadict, subsetdict, configdict, device='cpu'):
+    num_steps = subsetdict['num_preq_steps']
+    preq_all_size = subsetdict['preq_all_size']
+    
+    twonn_ids = []
+    successful = False
+    for preq_idx in range(num_steps+1):
+
+        # init rng
+        torch_gen = torch.Generator(device=device)
+        torch_gen.manual_seed(configdict['seed'])
+        set_seed(configdict['seed'])
+
+
+
+
+
+        # setting subsets
+        full_train = False
+        if preq_idx == num_steps:
+            full_train = True
+        cur_train_subset = None
+        cur_train_size = None
+        if full_train == False:
+            cur_train_subset = subsetdict['preq'][preq_idx]['train_subset']
+            cur_train_size = subsetdict['preq'][preq_idx]['train_size']
+        else:
+            cur_train_subset = subsetdict['preq_all_subset']
+            cur_train_size = subsetdict['preq_all_size']
+        
+        cur_train_subset.dataset.set_layer_idx(layer_idx)
+        train_pct = 100. * (cur_train_size/preq_all_size)
+
+        print(f'layer/preq ({layer_idx},{preq_idx}): train({cur_train_size}) ({train_pct:.4f})')
+        train_dl = TUD.DataLoader(cur_train_subset, batch_size = cur_train_size, shuffle=True, generator=torch_gen)
+    
+        cur_id = -1.
+        with torch.no_grad():
+            for batch_idx, data in enumerate(train_dl):
+                _ipt, ground_truth = data
+
+            
+                if _ipt.shape[0] != cur_train_size:
+                    print(f'did not load entire split of size {train_size}')
+                else: 
+                    cur_id = TN.calc_twonn(_ipt, batch_size = UC.TWONN_BATCH_SIZE)
+        if cur_id >= 0.:
+            twonn_ids.append(cur_id)
+
+    # bookkeeping
+    if len(twonn_ids) == (num_steps + 1):
+        successful = True
+        UP.save_twonn_ids(twonn_ids, configdict, layer_idx)
+    return successful
+
+
+
 def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu'):
 
     
@@ -366,7 +424,10 @@ if __name__ == "__main__":
             cur_bpr = calculate_biased_participation_ratio(torch_gen, train_subset, train_size, cur_mean, cur_stdev, configdict['model_dim'] , nstd = configdict['nonstandard'], shuffle = True, device=device)
             print(layer_idx, cur_bpr)
             UP.save_biased_part_rto(cur_bpr, configdict, layer_idx)
-
+    elif args.twonn == True:
+        for layer_idx in range(configdict['model_num_layers']):
+            cur_success = calc_twonn_curve(layer_idx, datadict, subsetdict, configdict, device=device)
+            print(layer_idx, cur_success)
     else:
         # TRAINING ==========
         if args.use_wandb == True:

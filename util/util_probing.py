@@ -198,6 +198,17 @@ def load_std(configdict, layer_idx):
     save_path = UMN.get_save_path('std', configdict, other=other_str, make_dir = False)
     return np.load(save_path)
 
+
+def save_twonn_ids(twonn_arr, configdict, layer_idx):
+    seed = configdict['seed']
+    split_str = f'sd{seed}_train'
+    layer_str = f'l{layer_idx}'
+    other_str = f'{layer_str}_{split_str}'
+    save_path = UMN.get_save_path('twonn', configdict, other=other_str, make_dir = True)
+    np.save(save_path, np.array(twonn_arr))
+
+
+
 def save_biased_part_rto(cur_pr, configdict, layer_idx):
     seed = configdict['seed']
     split_str = f'sd{seed}_train'
