@@ -13,6 +13,7 @@ import util.util_rdb as UR
 
 from models.mlpprobe import MLPProbe
 from probe_dataset import ProbeDataset
+from two_nn import calc_twonn
 
 from functools import partial
 from distutils.util import strtobool
@@ -192,7 +193,7 @@ def calc_twonn_curve(layer_idx, datadict, subsetdict, configdict, device='cpu'):
                 if _ipt.shape[0] != cur_train_size:
                     print(f'did not load entire split of size {train_size}')
                 else: 
-                    cur_id = TN.calc_twonn(_ipt, batch_size = UC.TWONN_BATCH_SIZE, unused_pct = UC.TWONN_UNUSED_PCT)
+                    cur_id = calc_twonn(_ipt, batch_size = UC.TWONN_BATCH_SIZE, unused_pct = UC.TWONN_UNUSED_PCT)
         if cur_id >= 0.:
             twonn_ids.append(cur_id)
             twonn_sizes.append(cur_train_size)
