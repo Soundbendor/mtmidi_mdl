@@ -26,6 +26,7 @@ if __name__ == "__main__":
     parser.add_argument("-wdb", "--use_wandb", type=strtobool, default=True, help="sync to wandb")
     parser.add_argument("-cd", "--use_cuda", type=strtobool, default=True, help="use cuda")
     parser.add_argument("-bpr", "--biased_part_rto", type=strtobool, default=False, help="calculate biased participation ratio")
+    parser.add_argument("-twn", "--twonn", type=strtobool, default=False, help="calculate twonn")
     parser.add_argument("-upr", "--unbiased_part_rto", type=strtobool, default=False, help="calculate biased participation ratio")
     parser.add_argument("-nstd", "--nonstandard", type=strtobool, default=False, help="do not divide data by feature-wise standard deviation")
 
@@ -75,13 +76,13 @@ if __name__ == "__main__":
                     slurm_strarr2 = ['#SBATCH -A soundbendor', f"#SBATCH -p {args.partition}"]
             slurm_strarr3 = [f"#SBATCH --mem={args.ram_mem}G", f"#SBATCH --gres=gpu:{args.gpus}", f"#SBATCH -t {args.num_days}-00:00:00", f"#SBATCH --job-name={job_str}", "#SBATCH --export=ALL", f"#SBATCH --output=/nfs/guille/eecs_research/soundbendor/kwand/out_mtmidi_mdl/{job_str}-%j.out", ""]
             slurm_strarr = slurm_strarr1 + slurm_strarr2 + slurm_strarr3
-            p_str = f"python {py_path}  -st {args.stats} -upr {args.unbiased_part_rto}  -bpr {args.biased_part_rto} -nstd {args.nonstandard} -ds {dataset} -et {args.expr_type} -ms {model_size} -sh {args.from_share} -wdb {args.use_wandb} -cd {args.use_cuda} -sf {args.suffix}" 
+            p_str = f"python {py_path}  -st {args.stats} -upr {args.unbiased_part_rto}  -bpr {args.biased_part_rto} -twn {args.twonn} -nstd {args.nonstandard} -ds {dataset} -et {args.expr_type} -ms {model_size} -sh {args.from_share} -wdb {args.use_wandb} -cd {args.use_cuda} -sf {args.suffix}" 
             slurm_strarr.append(p_str)
             script_fname = f"{start_time}_{job_str}.sh"
             script_path = os.path.join(sh_dir, script_fname)
             script_str = "\n".join(slurm_strarr)
             script_idx += 1
-            print(f"===== {args.expr_type} | {dataset} | {model_size} | STATS: {args.stats} | UPR: {args.unbiased_part_rto} | BPR: {args.biased_part_rto}=====")
+            print(f"===== {args.expr_type} | {dataset} | {model_size} | STATS: {args.stats} | UPR: {args.unbiased_part_rto} | BPR: {args.biased_part_rto} | TWONN: {args.twonn} =====")
             print(f"Creating {script_fname}")
             with open(script_path, 'w') as f:
                 f.write(script_str)

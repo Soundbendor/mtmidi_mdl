@@ -219,6 +219,11 @@ def get_save_path(save_type, configdict, other=None, make_dir = True):
         subfolder = UC.TWONN_FOLDER
         use_expr_type_folder = False
         ext = 'npy'
+    elif save_type == 'twonn_sz':
+        subfolder = UC.TWONN_SIZE_FOLDER
+        use_expr_type_folder = False
+        ext = 'npy'
+
     elif save_type == 'mean' or save_type == 'std':
         subfolder = UC.DATA_STATS_FOLDER
         use_expr_type_folder = False
