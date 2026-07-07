@@ -66,7 +66,10 @@ if __name__ == "__main__":
             if args.stats == False and using_part_rto == True:
                 job_str = f'pto_{job_str}'
             if args.stats == False and using_part_rto == False:
-                job_str = f'mdl_{job_str}'
+                if args.twonn == False:
+                    job_str = f'mdl_{job_str}'
+                else:
+                    job_str = f'twn_{job_str}'
             slurm_strarr1 = ["#!/bin/bash"]
             slurm_strarr2 = [f"#SBATCH -p {args.partition}"]
             if args.partition != 'preempt':
