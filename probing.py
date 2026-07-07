@@ -201,7 +201,7 @@ def calc_twonn_curve(layer_idx, datadict, subsetdict, configdict, device='cpu'):
     if len(twonn_ids) == (num_steps + 1):
         successful = True
         UP.save_twonn_ids(twonn_ids, configdict, layer_idx)
-        UP.save_twonn_sizes(twonn_sizes, configdict, layer_idx)
+        UP.save_twonn_sizes(twonn_sizes, configdict)
     return successful
 
 
