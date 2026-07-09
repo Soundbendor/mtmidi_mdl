@@ -192,14 +192,16 @@ def calc_twonn_curve(layer_idx, datadict, subsetdict, configdict, device='cpu'):
             
                 if _ipt.shape[0] != cur_train_size:
                     print(f'did not load entire split of size {train_size}')
+                    successful = False
                 else: 
-                    cur_id = calc_twonn(_ipt, batch_size = UC.TWONN_BATCH_SIZE, unused_pct = UC.TWONN_UNUSED_PCT)
+                    cur_id = calc_twonn(_ipt.to(device), batch_size = UC.TWONN_BATCH_SIZE, unused_pct = UC.TWONN_UNUSED_PCT).item()
         if cur_id >= 0.:
             twonn_ids.append(cur_id)
             twonn_sizes.append(cur_train_size)
+        else:
+            successful = False
     # bookkeeping
-    if len(twonn_ids) == (num_steps + 1):
-        successful = True
+    if successful == True:
         UP.save_twonn_ids(twonn_ids, configdict, layer_idx)
         UP.save_twonn_sizes(twonn_sizes, configdict, layer_idx)
     return successful
