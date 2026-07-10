@@ -153,7 +153,7 @@ def calc_twonn_curve(layer_idx, datadict, subsetdict, configdict, device='cpu'):
     
     twonn_ids = []
     twonn_sizes = []
-    successful = False
+    successful = True
     for preq_idx in range(num_steps+1):
 
         # init rng
