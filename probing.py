@@ -199,6 +199,7 @@ def calc_twonn_curve(layer_idx, datadict, subsetdict, configdict, device='cpu'):
             twonn_ids.append(cur_id)
             twonn_sizes.append(cur_train_size)
         else:
+            print(cur_id, 'not bigger than 0')
             successful = False
     # bookkeeping
     if successful == True:
