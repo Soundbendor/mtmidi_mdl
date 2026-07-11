@@ -41,19 +41,22 @@ def get_mus(idxs, N, dist_vec, batch_size = 64, device='cpu'):
     mu = shortest[:,1]/shortest[:,0]
     return mu
 
+#def filter_entries(cur_vec, unused_pct=0.0):
+
+
 def calc_twonn(datapts, batch_size = 64, unused_pct = 0.0, device='cpu'):
-    batch_dim = 0
     num_pts = datapts.shape[0]
     idxs = torch.arange(num_pts, device=device)
-    mus = torch.zeros(num_pts, dtype=datapts.dtype, device=device)
+    #mus = torch.zeros(num_pts, dtype=datapts.dtype, device=device)
     dists = torch.nn.functional.pdist(datapts, p=2)
-        #mus[i] = get_mu_i_old(datapts[i], datapts.index_select(batch_dim, idxs[idxs!= i]), batch_size = batch_size)
-    mus = get_mus(idxs, num_pts, dists, batch_size = batch_size, device =device)
-    mu_idxsort = torch.argsort(mus)
-    p_emp = torch.zeros(num_pts, dtype=mus.dtype,device=device)
-    p_emp_unsort = (torch.arange(num_pts, dtype=p_emp.dtype,device=device))/num_pts
+    #mus[i] = get_mu_i_old(datapts[i], datapts.index_select(batch_dim, idxs[idxs!= i]), batch_size = batch_size)
+    mus = get_mus(idxs, num_pts, dists, batch_size = batch_size, device =device).sort(descending=False).values
+    mus = mus[mus.isfinite()]
+    #mu_idxsort = torch.argsort(mus, descending=False)
+    #p_emp = torch.zeros(num_pts, dtype=mus.dtype,device=device)
+    p_emp = (torch.arange(mus.shape[0], dtype=mus.dtype,device=device))/num_pts
     # map i/N to to proper mu indices
-    p_emp[mu_idxsort] = p_emp_unsort
+    #p_emp[mu_idxsort] = p_emp_unsort
     #log_mus = torch.log(mus.index_select(0, idxs[idxs != max_idx])).unsqueeze(1)
     #log_emp = -1. * torch.log(1. - p_emp.index_select(0, idxs[idxs != max_idx])).unsqueeze(1)
     #log_mus = torch.log(mus.index_select(0, idxs)).unsqueeze(1)
@@ -64,8 +67,11 @@ def calc_twonn(datapts, batch_size = 64, unused_pct = 0.0, device='cpu'):
         use_idxs = int(num_pts * (1. - unused_pct))
         #log_mus = torch.log(mus.index_select(0, mu_idxsort[:use_idxs])).unsqueeze(1)
         #log_emp = -1. * torch.log(1. - p_emp.index_select(0, mu_idxsort[:use_idxs])).unsqueeze(1)
-        log_mus = torch.log(mus.index_select(0, mu_idxsort[:use_idxs]))
-        log_emp = -1. * torch.log(1. - p_emp.index_select(0, mu_idxsort[:use_idxs]))
+        #log_mus = torch.log(mus[mu_idxsort[:use_idxs]])
+        #log_emp = -1. * torch.log(1. - p_emp[mu_idxsort[:use_idxs]])
+
+        log_mus = torch.log(mus[:use_idxs])
+        log_emp = -1. * torch.log(1. - p_emp[:use_idxs])
     else:
         #log_mus = torch.log(mus).unsqueeze(1)
         #log_emp = -1. * torch.log(1. - p_emp).unsqueeze(1)
