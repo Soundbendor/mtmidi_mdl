@@ -195,11 +195,11 @@ def calc_twonn_curve(layer_idx, datadict, subsetdict, configdict, device='cpu'):
                     successful = False
                 else: 
                     cur_id = calc_twonn(_ipt.to(device), batch_size = UC.TWONN_BATCH_SIZE, unused_pct = UC.TWONN_UNUSED_PCT).item()
+        print('id:', cur_id)
         if cur_id >= 0.:
             twonn_ids.append(cur_id)
             twonn_sizes.append(cur_train_size)
         else:
-            print(cur_id, 'not bigger than 0')
             successful = False
     # bookkeeping
     if successful == True:

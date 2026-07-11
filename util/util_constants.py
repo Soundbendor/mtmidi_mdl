@@ -39,7 +39,7 @@ TRAIN_PCT = 0.92
 TEST_SUBPCT = 0.5
 NUM_CLASS_THRESH = 3
 BATCH_SIZE = 2048
-TWONN_BATCH_SIZE = -1
+TWONN_BATCH_SIZE = 64
 LEARNING_RATE = 10.**(-2)
 # no l2 weight decay (set to -2 in original which meant turn off)
 DATALOADER_SHUFFLE = True
