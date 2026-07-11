@@ -55,7 +55,7 @@ def calc_twonn(datapts, batch_size = 64, unused_pct = 0.0, device='cpu'):
     #mu_idxsort = torch.argsort(mus, descending=False)
     #p_emp = torch.zeros(num_pts, dtype=mus.dtype,device=device)
     p_emp = (torch.arange(mus.shape[0], dtype=mus.dtype,device=mus.device))/num_pts
-    print(dists.device, mus.device, p_emp.device)
+    #print(dists.device, mus.device, p_emp.device)
     # map i/N to to proper mu indices
     #p_emp[mu_idxsort] = p_emp_unsort
     #log_mus = torch.log(mus.index_select(0, idxs[idxs != max_idx])).unsqueeze(1)
