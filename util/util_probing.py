@@ -214,7 +214,7 @@ def save_zero_dist_csv(zd_dict, configdict, layer_idx):
     other_str = f'{layer_str}_{split_str}'
     save_path = UMN.get_save_path('zero_dist', configdict, other=other_str, make_dir = True)
     _df = pl.DataFrame(zd_dict, schema=[("name_1", pl.String), ("name_2", pl.String)])
-    _df = df.unique(keep="first", maintain_order=True)
+    _df = _df.unique(keep="first", maintain_order=True)
     _df.write_csv(save_path)
 
 def save_twonn_sizes(twonn_arr, configdict, layer_idx):
