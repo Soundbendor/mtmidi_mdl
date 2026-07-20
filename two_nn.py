@@ -116,10 +116,10 @@ def find_zero_dists(datapts, datanames, batch_size = 64, device='cpu'):
     #mus[i] = get_mu_i_old(datapts[i], datapts.index_select(batch_dim, idxs[idxs!= i]), batch_size = batch_size)
     zero_dist_pairs = get_zero_dist_pairs(idxs, num_pts, dists, batch_size = batch_size, device =device)
     ret = {'name_1': [], 'name_2': []}
-    print(names)
-    print(zero_dist_pairs)
+    #print(names)
+    #print(zero_dist_pairs)
     for _pair in zero_dist_pairs:
-        cur_names = [names[i] for i in _pair]
+        cur_names = [names[i.item()] for i in _pair]
         ret['name_1'].append(cur_names[0])
         ret['name_2'].append(cur_names[1])
     return ret
