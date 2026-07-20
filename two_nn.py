@@ -23,6 +23,69 @@ def get_dist_idxs(cur_idxs, idxs, N, device='cpu'):
     ret = N * ipts[0] + ipts[1] - ((ipts[0]+2) * (ipts[0]+1)) // 2
     return ret.reshape(num_idxs,N-1)
 
+"""
+cur_dists = dist_vec[dist_idxs]
+dist_vec (not counting offsets) gives the following as an example
+
+--- real_idxs ___
+0: 0 1 2 3
+1: 0 1 2 3
+2: 0 1 2 3
+3: 0 1 2 3
+4: 0 1 2 3
+
+--- real_idxs (of dist_idx) ---
+0: 1 2 3 4
+1: 0 2 3 4
+2: 0 1 3 4
+3: 0 1 2 4
+4: 0 1 2 3
+
+dist_idxs is shape (batch_size, N-1)
+
+Note the pattern:
+0: idx+1
+1: before 1 is real idx, starting at idx is idx+1
+2: before 2 is real idx, starting adx is idx + 1
+
+so to remap,
+first col gives real_indexes (cur_dist row + last_slice)
+second col gives the indices we need to remap like so
+if >= first col: + 1
+if < first_col: leave the same
+"""
+def get_real_idxs(idx_pairs):
+    # shape of num_pairs
+    where_add = idx_pairs[:,1] >= idx_pairs[:,0]
+    add_mask = torch.zeros_like(idx_pairs, device=idx_pairs.device)
+    add_mask[where_add,1] = 1
+    ret = idx_pairs + add_mask
+    return ret
+
+
+# returns sorted to take care of same pairs later
+# (since should return both (p1, p2) and (p2, p1)
+def get_zero_dist_pairs(idxs, N, dist_vec, batch_size = 64, device='cpu'):
+    last_slice = 0
+    zero_dist_pairs = None
+    while last_slice < N:
+        cur_slice = last_slice + batch_size
+        dist_idxs = get_dist_idxs(idxs[last_slice:cur_slice], idxs, N)
+        cur_dists = dist_vec[dist_idxs]
+        # make mask to get zeros
+        cur_mask = torch.ones_like(cur_dists, device=cur_dists.device)
+        cur_mask[cur_dists.nonzero(as_tuple = True)] = 0.
+        _zero_dist_pairs = cur_mask.nonzero()
+        # since we are offset by last_slice, add to first indices
+        _zero_dist_pairs[:,0] += last_slice
+        if zero_dist_pairs == None:
+            zero_dist_pairs = _zero_dist_pairs
+        else:
+            zero_dist_pairs = torch.vstack((zero_dist_pairs, _zero_dist_pairs))
+        last_slice = cur_slice
+    real_idxs = get_real_idxs(zero_dist_pairs)
+    return real_idxs.sort(axis=1).values
+
 
 def get_mus(idxs, N, dist_vec, batch_size = 64, device='cpu'):
     #log_mus = torch.log(mus.index_select(0, idxs[idxs != max_idx])).unsqueeze(1)
@@ -43,6 +106,21 @@ def get_mus(idxs, N, dist_vec, batch_size = 64, device='cpu'):
 
 #def filter_entries(cur_vec, unused_pct=0.0):
 
+
+def find_zero_dists(datapts, datanames, batch_size = 64, device='cpu'):
+    num_pts = datapts.shape[0]
+    idxs = torch.arange(num_pts, device=device)
+    names = {i:_name for (i,_name) in enumerate(datanames)}
+    #mus = torch.zeros(num_pts, dtype=datapts.dtype, device=device)
+    dists = torch.nn.functional.pdist(datapts, p=2)
+    #mus[i] = get_mu_i_old(datapts[i], datapts.index_select(batch_dim, idxs[idxs!= i]), batch_size = batch_size)
+    zero_dist_pairs = get_zero_dist_pairs(idxs, num_pts, dists, batch_size = batch_size, device =device)
+    ret = {'name_1': [], 'name_2': []}
+    for _pair in zero_dist_pairs:
+        cur_names = [names[i] for i in _pair]
+        ret['name_1'].append(cur_names[0])
+        ret['name_2'].append(cur_names[1])
+    return ret
 
 def calc_twonn(datapts, batch_size = 64, unused_pct = 0.0, device='cpu'):
     num_pts = datapts.shape[0]

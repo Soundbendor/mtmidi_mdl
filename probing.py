@@ -13,7 +13,7 @@ import util.util_rdb as UR
 
 from models.mlpprobe import MLPProbe
 from probe_dataset import ProbeDataset
-from two_nn import calc_twonn
+from two_nn import calc_twonn,find_zero_dists
 
 from functools import partial
 from distutils.util import strtobool
@@ -364,7 +364,37 @@ def _objective(trial, datadict, subsetdict, configdict, wandbdict, device='cpu')
         UW.finish_run(cur_run)
     return final_mdl
 
+def get_zero_dists(layer_idx, datadict, subsetdict, configdict, device='cpu'):
+    
+    successful = True
+    # init rng
+    torch_gen = torch.Generator(device=device)
+    torch_gen.manual_seed(configdict['seed'])
+    set_seed(configdict['seed'])
             
+    cur_train_subset = subsetdict['preq_all_subset']
+    cur_train_size = subsetdict['preq_all_size']
+        
+    cur_train_subset.dataset.set_layer_idx(layer_idx)
+    cur_train_subset.dataset.set_emit_name(True)
+
+    train_dl = TUD.DataLoader(cur_train_subset, batch_size = cur_train_size, shuffle=True, generator=torch_gen)
+   
+    zd_dict = None
+    with torch.no_grad():
+        for batch_idx, data in enumerate(train_dl):
+            _ipt, ground_truth, data_names = data
+
+        
+            if _ipt.shape[0] != cur_train_size:
+                print(f'did not load entire split of size {train_size}')
+                successful = False
+            else: 
+                zd_dict = find_zero_dists(_ipt.to(device), data_names, batch_size = UC.TWONN_BATCH_SIZE)
+    # bookkeeping
+    if successful == True:
+        UP.save_zero_dist_csv(zd_dict, configdict, layer_idx)
+    return successful
 
 
 if __name__ == "__main__":
@@ -373,6 +403,7 @@ if __name__ == "__main__":
     parser.add_argument("-ds", "--dataset", type=str, default="polyrhythms", help="dataset")
     parser.add_argument("-ms", "--model_size", type=str, default="musicgen-small", help="musicgen-small/musicgen-medium/musicgen-large/jukebox/MERT-v1-95M/MERT-v1-330M/wav2vec2-base/wav2vec2-large")
     parser.add_argument("-et", "--expr_type", type=str, default="mlp", help="experiment type")
+    parser.add_argument("-zd", "--zero_dist", type=strtobool, default=False, help="find zero dist embeddings")
     parser.add_argument("-dbg", "--debug", type=strtobool, default=False, help="debug")
     parser.add_argument("-wdb", "--use_wandb", type=strtobool, default=True, help="sync to wandb")
     parser.add_argument("-cd", "--use_cuda", type=strtobool, default=True, help="use cuda")
@@ -434,6 +465,10 @@ if __name__ == "__main__":
     elif args.twonn == True:
         for layer_idx in range(configdict['model_num_layers']):
             cur_success = calc_twonn_curve(layer_idx, datadict, subsetdict, configdict, device=device)
+            print(layer_idx, cur_success)
+    elif args.zero_dist == True:
+        for layer_idx in range(configdict['model_num_layers']):
+            cur_success = get_zero_dists(layer_idx, datadict, subsetdict, configdict, device=device)
             print(layer_idx, cur_success)
     else:
         # TRAINING ==========

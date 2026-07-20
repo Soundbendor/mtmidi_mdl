@@ -20,6 +20,7 @@ MODELS_FOLDER = 'model_models'
 DATA_STATS_FOLDER = 'data_stats'
 BIASED_PART_RTO_FOLDER = 'b_pr'
 UNBIASED_PART_RTO_FOLDER = 'ub_pr'
+ZERO_DIST_FOLDER = 'zero_dist'
 TWONN_FOLDER = 'twonn'
 TWONN_UNUSED_PCT = 0.1
 TWONN_SIZE_FOLDER = 'twonn_sz'

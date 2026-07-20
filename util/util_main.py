@@ -223,7 +223,10 @@ def get_save_path(save_type, configdict, other=None, make_dir = True):
         subfolder = UC.TWONN_SIZE_FOLDER
         use_expr_type_folder = False
         ext = 'npy'
-
+    elif save_type == 'zero_dist':
+        subfolder = UC.ZERO_DIST_FOLDER
+        use_expr_type_folder = False
+        ext = 'csv'
     elif save_type == 'mean' or save_type == 'std':
         subfolder = UC.DATA_STATS_FOLDER
         use_expr_type_folder = False
