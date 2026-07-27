@@ -10,7 +10,6 @@ from librosa import feature as lrf
 from transformers import AutoProcessor, AutoModel, Wav2Vec2FeatureExtractor, MusicgenForConditionalGeneration
 from typing import TYPE_CHECKING, Any, Optional, Union
 import numpy as np
-import accelerate
 import random
 from distutils.util import strtobool
 
