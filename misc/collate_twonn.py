@@ -17,7 +17,7 @@ models = ["musicgen-small", "musicgen-medium", "musicgen-large", "MERT-v1-95M", 
 
 root_folder = UC.PROJECT_ROOT
 
-exclude_ds = set(['tempos', 'polyrhythms', 'dynamics'])
+exclude_ds = set(['tempos'])
 res_folder = os.path.join(root_folder, UC.RESULTS_FOLDER)
 dses = [x for x in UC.DATASET_SHORT.keys() if x not in exclude_ds]
 
