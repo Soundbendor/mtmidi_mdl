@@ -185,6 +185,7 @@ def get_save_path(save_type, configdict, other=None, make_dir = True):
     expr_type = configdict['expr_type']
     model_size = configdict['model_size']
     is_nonstandard = configdict['nonstandard']
+    per_class = configdict['per_class']
     suffix = configdict['suffix']
     if save_type == 'cm':
         if is_nonstandard == False:
@@ -203,24 +204,42 @@ def get_save_path(save_type, configdict, other=None, make_dir = True):
         ext = 'model_dict'
     elif save_type == 'b_pr':
         if is_nonstandard == False:
-            subfolder = UC.BIASED_PART_RTO_FOLDER
+            if per_class == True:
+                subfolder = UC.BIASED_PART_RTO_PC_FOLDER
+            else:
+                subfolder = UC.BIASED_PART_RTO_FOLDER
         else:
-            subfolder = UC.BIASED_PART_RTO_NONSTANDARD_FOLDER
+            if per_class == True:
+                subfolder = UC.BIASED_PART_RTO_PC_NONSTANDARD_FOLDER
+            else:
+                subfolder = UC.BIASED_PART_RTO_NONSTANDARD_FOLDER
         use_expr_type_folder = False
         ext = 'npy'
     elif save_type == 'ub_pr':
         if is_nonstandard == False:
-            subfolder = UC.UNBIASED_PART_RTO_FOLDER
+            if per_class == True:
+                subfolder = UC.UNBIASED_PART_RTO_PC_FOLDER
+            else:
+                subfolder = UC.UNBIASED_PART_RTO_FOLDER
         else:
-            subfolder = UC.UNBIASED_PART_RTO_NONSTANDARD_FOLDER
+            if per_class == True:
+                subfolder = UC.UNBIASED_PART_RTO_PC_NONSTANDARD_FOLDER
+            else:
+                subfolder = UC.UNBIASED_PART_RTO_NONSTANDARD_FOLDER
         use_expr_type_folder = False
         ext = 'npy'
     elif save_type == 'twonn':
-        subfolder = UC.TWONN_FOLDER
+        if per_class == True:
+            subfolder = UC.TWONN_PC_FOLDER
+        else:
+            subfolder = UC.TWONN_FOLDER
         use_expr_type_folder = False
         ext = 'npy'
     elif save_type == 'twonn_sz':
-        subfolder = UC.TWONN_SIZE_FOLDER
+        if per_class == True:
+            subfolder = UC.TWONN_PC_SIZE_FOLDER
+        else:
+            subfolder = UC.TWONN_SIZE_FOLDER
         use_expr_type_folder = False
         ext = 'npy'
     elif save_type == 'zero_dist':

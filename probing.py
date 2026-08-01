@@ -46,35 +46,126 @@ def calculate_mean_stdev(generator, train_subset, train_size, emb_dim, shuffle =
 
 
 
-def calculate_biased_participation_ratio(generator, train_subset, train_size, cur_mean, cur_stdev, emb_dim, nstd = False, shuffle = True, device='cpu'):
-    train_dl = TUD.DataLoader(train_subset, batch_size = train_size, shuffle=shuffle, generator=generator)
-    
-
-    with torch.no_grad():
-        for batch_idx, data in enumerate(train_dl):
-            _ipt, ground_truth = data
-            if _ipt.shape[0] != train_size:
-                print(f'did not load entire split of size {train_size}')
-                break
-
-            ipt = None
-            if nstd == False:
-                ipt = (_ipt - cur_mean)/cur_stdev
-            else:
-                ipt = (_ipt - cur_mean)
-
-
+def calculate_biased_participation_ratio(generator, train_subset, train_size, cur_mean, cur_stdev, num_classes, configdict, device='cpu'):
+    emb_dim = configdict['model_dim']
+    nstd = configdict['nonstandard']
+    per_class = configdict['per_class'] 
+    shuffle = False
+    successful = True
         
-            cur_cov = (ipt.T @ ipt)/(train_size - 1)
-            if cur_cov.shape[0] != emb_dim or cur_cov.shape[1] != emb_dim:
-                print(f'cov matrix did not match emb_dim of size {emb_dim}')
-            cur_cov2 = cur_cov @ cur_cov
-            if cur_cov2.shape[0] != emb_dim or cur_cov2.shape[1] != emb_dim:
-                print(f'cov*cov matrix did not match emb_dim of size {emb_dim}')
-            cur_nom = torch.pow(torch.trace(cur_cov), 2)
-            cur_denom = torch.trace(cur_cov2)
-            ret = cur_nom/cur_denom
-    return ret
+    for class_idx in range(num_classes): 
+        if per_class == False and class_idx > 0:
+            break
+        train_dl = TUD.DataLoader(train_subset, batch_size = train_size, shuffle=shuffle, generator=generator)
+        cur_bpr = -1 
+        with torch.no_grad():
+            for batch_idx, data in enumerate(train_dl):
+                _ipt0, ground_truth = data
+                if _ipt0.shape[0] != train_size:
+                    print(f'did not load entire split of size {train_size}')
+                    break
+
+                ipt = None
+                if nstd == False:
+                    _ipt = (_ipt0 - cur_mean)/cur_stdev
+                else:
+                    _ipt = (_ipt0 - cur_mean)
+
+                if per_class == True:
+                    cur_idxs = torch.where(ground_truth == class_idx)[0]
+                    ipt = _ipt[cur_idxs]
+                else:
+                    ipt = _ipt
+
+                cur_cov = (ipt.T @ ipt)/(train_size - 1)
+                if cur_cov.shape[0] != emb_dim or cur_cov.shape[1] != emb_dim:
+                    print(f'cov matrix did not match emb_dim of size {emb_dim}')
+                    successful = False
+                    break
+                cur_cov2 = cur_cov @ cur_cov
+                if cur_cov2.shape[0] != emb_dim or cur_cov2.shape[1] != emb_dim:
+                    print(f'cov*cov matrix did not match emb_dim of size {emb_dim}')
+                    successful = False
+                    break
+                cur_nom = torch.pow(torch.trace(cur_cov), 2)
+                cur_denom = torch.trace(cur_cov2)
+                cur_bpr = cur_nom/cur_denom
+        if cur_bpr > 0:
+            UP.save_biased_part_rto(cur_bpr, configdict, layer_idx, class_idx)
+        #print(layer_idx, cur_bpr)
+    return successful
+
+def calc_twonn_curve(layer_idx, datadict, subsetdict, configdict, device='cpu'):
+    num_steps = subsetdict['num_preq_steps']
+    preq_all_size = subsetdict['preq_all_size']
+    per_class = configdict['per_class'] 
+    for class_idx in range(datadict['num_classes']):
+        if per_class == False and class_idx > 0:
+            break
+        twonn_ids = []
+        twonn_sizes = []
+        successful = True
+
+
+        for preq_idx in range(num_steps+1):
+
+            # init rng
+            torch_gen = torch.Generator(device=device)
+            torch_gen.manual_seed(configdict['seed'])
+            set_seed(configdict['seed'])
+
+
+
+
+
+            # setting subsets
+            full_train = False
+            if preq_idx == num_steps:
+                full_train = True
+            cur_train_subset = None
+            cur_train_size = None
+            if full_train == False:
+                cur_train_subset = subsetdict['preq'][preq_idx]['train_subset']
+                cur_train_size = subsetdict['preq'][preq_idx]['train_size']
+            else:
+                cur_train_subset = subsetdict['preq_all_subset']
+                cur_train_size = subsetdict['preq_all_size']
+            
+            cur_train_subset.dataset.set_layer_idx(layer_idx)
+            train_pct = 100. * (cur_train_size/preq_all_size)
+
+            print(f'layer/preq ({layer_idx},{preq_idx}): train({cur_train_size}) ({train_pct:.4f})')
+            train_dl = TUD.DataLoader(cur_train_subset, batch_size = cur_train_size, shuffle=False, generator=torch_gen)
+        
+            cur_id = -1.
+            with torch.no_grad():
+                for batch_idx, data in enumerate(train_dl):
+                    _ipt, ground_truth = data
+
+
+                
+                    if _ipt.shape[0] != cur_train_size:
+                        print(f'did not load entire split of size {train_size}')
+                        successful = False
+                    else: 
+                        ipt = None
+                        if per_class == True:
+                            cur_idxs = torch.where(ground_truth == class_idx)[0]
+                            ipt = _ipt[cur_idxs]
+                        else:
+                            ipt = _ipt
+                        cur_id = calc_twonn(ipt.to(device), batch_size = UC.TWONN_BATCH_SIZE, unused_pct = UC.TWONN_UNUSED_PCT).item()
+            print('id:', cur_id)
+            if cur_id >= 0.:
+                twonn_ids.append(cur_id)
+                twonn_sizes.append(cur_train_size)
+            else:
+                successful = False
+        # bookkeeping
+        if successful == True:
+            UP.save_twonn_ids(twonn_ids, configdict, layer_idx, class_idx)
+            UP.save_twonn_sizes(twonn_sizes, configdict, layer_idx, class_idx)
+    return successful
 
 
 
@@ -145,67 +236,6 @@ def valid_test_model(model, mean, stdev, generator, loss_fn, valid_subset, nstd 
             truths, preds = UP.accumulate_truths_preds(truths, ground_truth, preds, model_pred, batch_idx, is_classification)
 
     return total_loss, truths, preds
-
-
-def calc_twonn_curve(layer_idx, datadict, subsetdict, configdict, device='cpu'):
-    num_steps = subsetdict['num_preq_steps']
-    preq_all_size = subsetdict['preq_all_size']
-    
-    twonn_ids = []
-    twonn_sizes = []
-    successful = True
-    for preq_idx in range(num_steps+1):
-
-        # init rng
-        torch_gen = torch.Generator(device=device)
-        torch_gen.manual_seed(configdict['seed'])
-        set_seed(configdict['seed'])
-
-
-
-
-
-        # setting subsets
-        full_train = False
-        if preq_idx == num_steps:
-            full_train = True
-        cur_train_subset = None
-        cur_train_size = None
-        if full_train == False:
-            cur_train_subset = subsetdict['preq'][preq_idx]['train_subset']
-            cur_train_size = subsetdict['preq'][preq_idx]['train_size']
-        else:
-            cur_train_subset = subsetdict['preq_all_subset']
-            cur_train_size = subsetdict['preq_all_size']
-        
-        cur_train_subset.dataset.set_layer_idx(layer_idx)
-        train_pct = 100. * (cur_train_size/preq_all_size)
-
-        print(f'layer/preq ({layer_idx},{preq_idx}): train({cur_train_size}) ({train_pct:.4f})')
-        train_dl = TUD.DataLoader(cur_train_subset, batch_size = cur_train_size, shuffle=True, generator=torch_gen)
-    
-        cur_id = -1.
-        with torch.no_grad():
-            for batch_idx, data in enumerate(train_dl):
-                _ipt, ground_truth = data
-
-            
-                if _ipt.shape[0] != cur_train_size:
-                    print(f'did not load entire split of size {train_size}')
-                    successful = False
-                else: 
-                    cur_id = calc_twonn(_ipt.to(device), batch_size = UC.TWONN_BATCH_SIZE, unused_pct = UC.TWONN_UNUSED_PCT).item()
-        print('id:', cur_id)
-        if cur_id >= 0.:
-            twonn_ids.append(cur_id)
-            twonn_sizes.append(cur_train_size)
-        else:
-            successful = False
-    # bookkeeping
-    if successful == True:
-        UP.save_twonn_ids(twonn_ids, configdict, layer_idx)
-        UP.save_twonn_sizes(twonn_sizes, configdict, layer_idx)
-    return successful
 
 
 
@@ -401,6 +431,7 @@ if __name__ == "__main__":
     #### arg parsing
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-ds", "--dataset", type=str, default="polyrhythms", help="dataset")
+    parser.add_argument("-pcl", "--per_class", type=strtobool, default=False, help="calculate per class")
     parser.add_argument("-ms", "--model_size", type=str, default="musicgen-small", help="musicgen-small/musicgen-medium/musicgen-large/jukebox/MERT-v1-95M/MERT-v1-330M/wav2vec2-base/wav2vec2-large")
     parser.add_argument("-et", "--expr_type", type=str, default="mlp", help="experiment type")
     parser.add_argument("-zd", "--zero_dist", type=strtobool, default=False, help="find zero dist embeddings")
@@ -459,9 +490,7 @@ if __name__ == "__main__":
 
             cur_mean = torch.from_numpy(UP.load_mean(configdict, layer_idx)).to(device)
             cur_stdev = torch.from_numpy(UP.load_std(configdict, layer_idx)).to(device)
-            cur_bpr = calculate_biased_participation_ratio(torch_gen, train_subset, train_size, cur_mean, cur_stdev, configdict['model_dim'] , nstd = configdict['nonstandard'], shuffle = True, device=device)
-            print(layer_idx, cur_bpr)
-            UP.save_biased_part_rto(cur_bpr, configdict, layer_idx)
+            successful = calculate_biased_participation_ratio(torch_gen, train_subset, train_size, cur_mean, cur_stdev, dataict['num_classes'], configdict, device=device)
     elif args.twonn == True:
         for layer_idx in range(configdict['model_num_layers']):
             cur_success = calc_twonn_curve(layer_idx, datadict, subsetdict, configdict, device=device)
