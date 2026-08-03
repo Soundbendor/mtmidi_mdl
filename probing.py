@@ -490,7 +490,7 @@ if __name__ == "__main__":
 
             cur_mean = torch.from_numpy(UP.load_mean(configdict, layer_idx)).to(device)
             cur_stdev = torch.from_numpy(UP.load_std(configdict, layer_idx)).to(device)
-            successful = calculate_biased_participation_ratio(torch_gen, train_subset, train_size, cur_mean, cur_stdev, dataict['num_classes'], configdict, device=device)
+            successful = calculate_biased_participation_ratio(torch_gen, train_subset, train_size, cur_mean, cur_stdev, datadict['num_classes'], configdict, device=device)
     elif args.twonn == True:
         for layer_idx in range(configdict['model_num_layers']):
             cur_success = calc_twonn_curve(layer_idx, datadict, subsetdict, configdict, device=device)
