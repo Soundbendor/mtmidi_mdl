@@ -238,6 +238,27 @@ def save_twonn_sizes(twonn_arr, configdict, layer_idx, class_idx):
     np.save(save_path, np.array(twonn_arr))
 
 
+def save_svd_tup(svd_tup, configdict, layer_idx):
+    seed = configdict['seed']
+    split_str = f'sd{seed}_train'
+    layer_str = f'l{layer_idx}'
+    other_str = f'{layer_str}_{split_str}'
+
+    save_path_S = UMN.get_save_path('svd_s', configdict, other=other_str, make_dir = True)
+    save_path_Vh = UMN.get_save_path('svd_vh', configdict, other=other_str, make_dir = True)
+    np.save(save_path_S, svd_tup.S.detach().cpu().numpy())
+    np.save(save_path_Vh, svd_tup.Vh.detach().cpu().numpy())
+
+def save_svd_coeffs(svd_coeffs, configdict, layer_idx):
+    seed = configdict['seed']
+    split_str = f'sd{seed}_train'
+    layer_str = f'l{layer_idx}'
+    other_str = f'{layer_str}_{split_str}'
+
+    save_path = UMN.get_save_path('svd_coeffs', configdict, other=other_str, make_dir = True)
+    np.save(save_path, svd_coeffs.detach().cpu().numpy())
+
+
 
 def save_biased_part_rto(cur_pr, configdict, layer_idx, class_idx):
     seed = configdict['seed']

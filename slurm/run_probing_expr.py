@@ -20,6 +20,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-ds", "--datasets", nargs="+", type=str, default=["polyrhythms", "secondary_dominants", "dynamics", "seventh_chords", "mode_mixture", "time_signatures", "notes", "scales", "intervals", "simple_progressions", "chords"], help="datasets")
     parser.add_argument("-pcl", "--per_class", type=strtobool, default=False, help="calculate per class")
+    parser.add_argument("-pca", "--calc_pca", type=strtobool, default=False, help="calculate PCA")
     parser.add_argument("-nd", "--num_days", type=int, default=1, help="number of days")
     parser.add_argument("-pt", "--partition", type=str, default="preempt", help="partition to run on")
     parser.add_argument("-ms", "--model_sizes", nargs="+", type=str, default=["MERT-v1-95M", "MERT-v1-330M", "wav2vec2-base", "wav2vec2-large", "musicgen-small", "musicgen-medium", "musicgen-large"], help="musicgen-small/musicgen-medium/musicgen-large/jukebox/MERT-v1-95M/MERT-v1-330M/wav2vec2-base/wav2vec2-large")
@@ -64,17 +65,18 @@ if __name__ == "__main__":
         for model_size in args.model_sizes:
             size_short = UC.MODEL_SIZES_SHORT[model_size]         
             job_str = f'{expr_short}-{ds_short}-{size_short}'
-            if args.stats == True and using_part_rto == False:
+            if args.stats == True:
                 job_str = f'sts_{job_str}'
-            if args.stats == False and using_part_rto == True:
+            elif using_part_rto == True:
                 job_str = f'pto_{job_str}'
-            if args.stats == False and using_part_rto == False:
-                if args.twonn == False and args.zero_dist == False:
-                    job_str = f'mdl_{job_str}'
-                elif args.zero_dist == True:
-                    job_str = f'zd_{job_str}'
-                else:
-                    job_str = f'twn_{job_str}'
+            elif args.zero_dist == True:
+                job_str = f'zd_{job_str}'
+            elif args.twonn == True:
+                job_str = f'twn_{job_str}'
+            elif args.calc_pca == True:
+                job_str = f'pca_{job_str}'
+            else:
+                job_str = f'mdl_{job_str}'
             slurm_strarr1 = ["#!/bin/bash"]
             slurm_strarr2 = [f"#SBATCH -p {args.partition}"]
             if args.partition != 'preempt':
@@ -86,7 +88,7 @@ if __name__ == "__main__":
                 slurm_strarr2.append(f"#SBATCH -w {args.node}")
             slurm_strarr3 = [f"#SBATCH --mem={args.ram_mem}G", f"#SBATCH --gres=gpu:{args.gpus}", f"#SBATCH -t {args.num_days}-00:00:00", f"#SBATCH --job-name={job_str}", "#SBATCH --export=ALL", f"#SBATCH --output=/nfs/guille/eecs_research/soundbendor/kwand/out_mtmidi_mdl/{job_str}-%j.out", ""]
             slurm_strarr = slurm_strarr1 + slurm_strarr2 + slurm_strarr3
-            p_str = f"python {py_path}  -st {args.stats} -upr {args.unbiased_part_rto}  -bpr {args.biased_part_rto} -twn {args.twonn} -nstd {args.nonstandard} -ds {dataset} -et {args.expr_type} -ms {model_size} -sh {args.from_share} -wdb {args.use_wandb} -cd {args.use_cuda} -sf {args.suffix} -zd {args.zero_dist} -pcl {args.per_class}" 
+            p_str = f"python {py_path}  -st {args.stats} -upr {args.unbiased_part_rto}  -bpr {args.biased_part_rto} -twn {args.twonn} -nstd {args.nonstandard} -ds {dataset} -et {args.expr_type} -ms {model_size} -sh {args.from_share} -wdb {args.use_wandb} -cd {args.use_cuda} -sf {args.suffix} -zd {args.zero_dist} -pcl {args.per_class} -pca {args.calc_pca}" 
             slurm_strarr.append(p_str)
             script_fname = f"{start_time}_{job_str}.sh"
             script_path = os.path.join(sh_dir, script_fname)
