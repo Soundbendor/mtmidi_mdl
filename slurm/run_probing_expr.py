@@ -86,7 +86,7 @@ if __name__ == "__main__":
                 slurm_strarr2.append(f"#SBATCH -w {args.node}")
             slurm_strarr3 = [f"#SBATCH --mem={args.ram_mem}G", f"#SBATCH --gres=gpu:{args.gpus}", f"#SBATCH -t {args.num_days}-00:00:00", f"#SBATCH --job-name={job_str}", "#SBATCH --export=ALL", f"#SBATCH --output=/nfs/guille/eecs_research/soundbendor/kwand/out_mtmidi_mdl/{job_str}-%j.out", ""]
             slurm_strarr = slurm_strarr1 + slurm_strarr2 + slurm_strarr3
-            p_str = f"python {py_path}  -st {args.stats} -upr {args.unbiased_part_rto}  -bpr {args.biased_part_rto} -twn {args.twonn} -nstd {args.nonstandard} -ds {dataset} -et {args.expr_type} -ms {model_size} -sh {args.from_share} -wdb {args.use_wandb} -cd {args.use_cuda} -sf {args.suffix} -zd {args.zero_dist}" 
+            p_str = f"python {py_path}  -st {args.stats} -upr {args.unbiased_part_rto}  -bpr {args.biased_part_rto} -twn {args.twonn} -nstd {args.nonstandard} -ds {dataset} -et {args.expr_type} -ms {model_size} -sh {args.from_share} -wdb {args.use_wandb} -cd {args.use_cuda} -sf {args.suffix} -zd {args.zero_dist} -pcl {args.per_class}" 
             slurm_strarr.append(p_str)
             script_fname = f"{start_time}_{job_str}.sh"
             script_path = os.path.join(sh_dir, script_fname)
