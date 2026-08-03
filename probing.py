@@ -45,7 +45,6 @@ def calculate_mean_stdev(generator, train_subset, train_size, emb_dim, shuffle =
     return _mean, _std
 
 
-
 def calculate_biased_participation_ratio(generator, train_subset, train_size, cur_mean, cur_stdev, num_classes, configdict, device='cpu'):
     emb_dim = configdict['model_dim']
     nstd = configdict['nonstandard']
@@ -65,6 +64,7 @@ def calculate_biased_participation_ratio(generator, train_subset, train_size, cu
                     print(f'did not load entire split of size {train_size}')
                     break
 
+                _ipt = None
                 ipt = None
                 if nstd == False:
                     _ipt = (_ipt0 - cur_mean)/cur_stdev
