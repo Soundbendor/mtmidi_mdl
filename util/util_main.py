@@ -243,21 +243,21 @@ def get_save_path(save_type, configdict, other=None, make_dir = True):
         use_expr_type_folder = False
         ext = 'npy'
     elif save_type == 'svd_s':
-        if nonstandard == False:
+        if is_nonstandard == False:
             subfolder = UC.SVD_S_FOLDER
         else:
             subfolder = UC.SVD_S_NONSTANDARD_FOLDER
         use_expr_type_folder = False
         ext = 'npy'
     elif save_type == 'svd_vh':
-        if nonstandard == False:
+        if is_nonstandard == False:
             subfolder = UC.SVD_VH_FOLDER
         else:
             subfolder = UC.SVD_VH_NONSTANDARD_FOLDER
         use_expr_type_folder = False
         ext = 'npy'
     elif save_type == 'svd_coeffs':
-        if nonstandard == False:
+        if is_nonstandard == False:
             subfolder = UC.SVD_COEFFS_FOLDER
         else:
             subfolder = UC.SVD_COEFFS_NONSTANDARD_FOLDER
