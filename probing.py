@@ -49,6 +49,7 @@ def calculate_pca_coeffs(generator, train_subset, cur_mean, cur_stdev, train_siz
     cur_coeffs = None
     successful = True
     nstd = configdict['nonstandard']
+    shuffle = False
     train_dl = TUD.DataLoader(train_subset, batch_size = train_size, shuffle=shuffle, generator=generator)
     with torch.no_grad():
         for batch_idx, data in enumerate(train_dl):
