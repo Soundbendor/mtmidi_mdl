@@ -21,6 +21,7 @@ def build_config(parser_args, datadict):
     _config['model_dim'] = model_shape[1]
     _config['model_num_layers'] = model_shape[0]
     _config['dataloader_shuffle'] = UC.DATALOADER_SHUFFLE
+    _config['svd_num_coeffs'] = UC.SVD_NUM_COEFFS
     if parser_args.expr_type == 'mlp':
         _config['probe_hidden_dims'] = UC.MLPPROBE_HIDDEN_DIMS
     elif parser_args.expr_type == 'linear':
@@ -249,11 +250,12 @@ def save_svd_tup(svd_tup, configdict, layer_idx):
     np.save(save_path_S, svd_tup.S.detach().cpu().numpy())
     np.save(save_path_Vh, svd_tup.Vh.detach().cpu().numpy())
 
-def save_svd_coeffs(svd_coeffs, configdict, layer_idx):
+def save_svd_coeffs(svd_coeffs, configdict, layer_idx,num_coeffs=3):
     seed = configdict['seed']
     split_str = f'sd{seed}_train'
     layer_str = f'l{layer_idx}'
-    other_str = f'{layer_str}_{split_str}'
+    coeff_str = f'nc{num_coeffs}'
+    other_str = f'{layer_str}_{coeff_str}_{split_str}'
 
     save_path = UMN.get_save_path('svd_coeffs', configdict, other=other_str, make_dir = True)
     np.save(save_path, svd_coeffs.detach().cpu().numpy())

@@ -48,6 +48,7 @@ def calculate_pca_coeffs(generator, train_subset, cur_mean, cur_stdev, train_siz
     cur_svd = None
     cur_coeffs = None
     successful = True
+    num_coeffs = configdict['svd_num_coeffs']
     nstd = configdict['nonstandard']
     shuffle = False
     train_dl = TUD.DataLoader(train_subset, batch_size = train_size, shuffle=shuffle, generator=generator)
@@ -72,7 +73,7 @@ def calculate_pca_coeffs(generator, train_subset, cur_mean, cur_stdev, train_siz
             # ROWS are singular vectors of Vh
             # thin_vh * X.T (num_coeffs x emb_dim * emb_dim x train_size = num_coeffs x train_size)
             # take transpose to make train_size x num_coeffs
-            cur_coeffs = (cur_svd.Vh @ ipt.T).T
+            cur_coeffs = (cur_svd.Vh[:num_coeffs] @ ipt.T).T
     if cur_svd != None:
         UP.save_svd_tup(cur_svd, configdict, layer_idx)
     if cur_coeffs != None:
