@@ -52,6 +52,7 @@ def calculate_pca_coeffs(generator, train_subset, cur_mean, cur_stdev, train_siz
     nstd = configdict['nonstandard']
     shuffle = False
     train_dl = TUD.DataLoader(train_subset, batch_size = train_size, shuffle=shuffle, generator=generator)
+    class_idxs = None
     with torch.no_grad():
         for batch_idx, data in enumerate(train_dl):
             _ipt, ground_truth = data
@@ -74,10 +75,14 @@ def calculate_pca_coeffs(generator, train_subset, cur_mean, cur_stdev, train_siz
             # thin_vh * X.T (num_coeffs x emb_dim * emb_dim x train_size = num_coeffs x train_size)
             # take transpose to make train_size x num_coeffs
             cur_coeffs = (cur_svd.Vh[:num_coeffs] @ ipt.T).T
+            class_idxs = ground_truth
     if cur_svd != None:
         UP.save_svd_tup(cur_svd, configdict, layer_idx)
     if cur_coeffs != None:
         UP.save_svd_coeffs(cur_coeffs, configdict, layer_idx)
+    if class_idxs != None:
+        UP.save_svd_clidxs(class_idxs, configdict, layer_idx)
+
     return successful
 
             

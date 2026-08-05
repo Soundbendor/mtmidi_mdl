@@ -260,6 +260,16 @@ def save_svd_coeffs(svd_coeffs, configdict, layer_idx,num_coeffs=3):
     save_path = UMN.get_save_path('svd_coeffs', configdict, other=other_str, make_dir = True)
     np.save(save_path, svd_coeffs.detach().cpu().numpy())
 
+def save_svd_clidxs(svd_clidxs, configdict, layer_idx,num_coeffs=3):
+    seed = configdict['seed']
+    split_str = f'sd{seed}_train'
+    layer_str = f'l{layer_idx}'
+    coeff_str = f'nc{num_coeffs}'
+    other_str = f'{layer_str}_{coeff_str}_{split_str}'
+
+    save_path = UMN.get_save_path('svd_clidxs', configdict, other=other_str, make_dir = True)
+    np.save(save_path, svd_clidxs.detach().cpu().numpy())
+
 
 
 def save_biased_part_rto(cur_pr, configdict, layer_idx, class_idx):

@@ -263,6 +263,13 @@ def get_save_path(save_type, configdict, other=None, make_dir = True):
             subfolder = UC.SVD_COEFFS_NONSTANDARD_FOLDER
         use_expr_type_folder = False
         ext = 'npy'
+    elif save_type == 'svd_clidxs':
+        if is_nonstandard == False:
+            subfolder = UC.SVD_CLASS_IDXS_FOLDER
+        else:
+            subfolder = UC.SVD_CLASS_IDXS_NONSTANDARD_FOLDER
+        use_expr_type_folder = False
+        ext = 'npy'
     elif save_type == 'zero_dist':
         subfolder = UC.ZERO_DIST_FOLDER
         use_expr_type_folder = False
