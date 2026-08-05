@@ -24,7 +24,7 @@ colors = ["#00ffff", "#04d8b2", "#069af3", "#e6daa6", "#000000", "#0343df", "#a5
 exclude_ds = set(['tempos'])
 res_folder = os.path.join(root_folder, UC.RESULTS_FOLDER)
 #dses = [x for x in UC.DATASET_SHORT.keys() if x not in exclude_ds]
-dses = ["polyrhythms", "dynamics", "notes", "scales", "seventh_chords", "time_signatures"]
+dses = ["polyrhythms", "dynamics", "notes", "scales", "seventh_chords", "time_signatures", "intervals", "simple_progressions", "chords"]
 
 coeff_folder = os.path.join(root_folder, UC.SVD_COEFFS_NONSTANDARD_FOLDER)
 clidx_folder = os.path.join(root_folder, UC.SVD_CLASS_IDXS_NONSTANDARD_FOLDER)
