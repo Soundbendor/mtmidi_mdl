@@ -14,8 +14,8 @@ suffix = 1
 num_coeffs = 3
 subset = 'train'
 GRAPH_SUBFOLDER = 'pca'
-#models = ["musicgen-small", "musicgen-medium", "musicgen-large", "MERT-v1-95M", "MERT-v1-330M", "wav2vec2-base", "wav2vec2-large"]
-models = ["MERT-v1-95M"]
+models = ["musicgen-small", "musicgen-medium", "musicgen-large", "MERT-v1-95M", "MERT-v1-330M", "wav2vec2-base", "wav2vec2-large"]
+#models = ["MERT-v1-95M"]
 #models = ["musicgen-medium", "musicgen-large", "MERT-v1-95M", "MERT-v1-330M", "wav2vec2-base", "wav2vec2-large"]
 
 root_folder = UC.PROJECT_ROOT
@@ -24,7 +24,7 @@ colors = ["#00ffff", "#04d8b2", "#069af3", "#e6daa6", "#000000", "#0343df", "#a5
 exclude_ds = set(['tempos'])
 res_folder = os.path.join(root_folder, UC.RESULTS_FOLDER)
 #dses = [x for x in UC.DATASET_SHORT.keys() if x not in exclude_ds]
-dses = ["polyrhythms"]
+dses = ["polyrhythms", "dynamics", "notes", "scales", "seventh_chords", "time_signatures"]
 
 coeff_folder = os.path.join(root_folder, UC.SVD_COEFFS_NONSTANDARD_FOLDER)
 clidx_folder = os.path.join(root_folder, UC.SVD_CLASS_IDXS_NONSTANDARD_FOLDER)
@@ -65,8 +65,8 @@ for ds in dses:
     clidx_ds_folder = os.path.join(clidx_folder, ds)
     for m in models:
         num_layers = UC.MODEL_NUM_LAYERS[m]
-        #for l in range(num_layers):
-        for l in [10]:
+        for l in range(num_layers):
+        #for l in [10]:
             cur_fname = f'{m}_l{l}_nc{num_coeffs}_sd{UC.SEED}_{subset}-{suffix}.npy'
             coeff_path = os.path.join(coeff_ds_folder, cur_fname)
             clidx_path = os.path.join(clidx_ds_folder, cur_fname)
