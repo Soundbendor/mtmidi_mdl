@@ -167,6 +167,21 @@ def save_npy(save_arr, fname, model_size, dataset='polyrhythms', make_dir = True
     fpath = os.path.join(modelpath, fname)
     np.save(fpath, save_arr, allow_pickle = True)
 
+# get number of needed to meet proportion threshold
+def get_num_needed(arr, thresh):
+    ret = 0
+    if thresh >= 1.:
+        ret = arr.shape[0]
+    elif thresh > 0.:
+        cur_sort = arr.abs().sort(descending = True)[0]
+        cur_cumsum = cur_sort.cumsum(dim=0)
+        cur_norm = cur_cumsum/cur_cumsum.max()
+        min_idx = torch.argwhere(cur_norm >= thresh).flatten().min().item()
+        # idx of min elt that meets threshold
+        # so need to add one
+        ret = min_idx + 1
+    return ret
+    
 def dict_arrayargs_to_str(cur_dict):
     ret = {}
     for (k,v) in cur_dict.items():
@@ -294,4 +309,5 @@ def get_save_path(save_type, configdict, other=None, make_dir = True):
     else:
         fname = f'{model_size}_{other}-{suffix}.{ext}'
     return os.path.join(cur_path, fname)
+
 
