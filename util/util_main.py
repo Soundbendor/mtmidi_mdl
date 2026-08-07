@@ -174,9 +174,9 @@ def get_num_needed(arr, thresh):
         ret = arr.shape[0]
     elif thresh > 0.:
         #cur_sort = arr.abs().sort(descending = True)[0]
-        cur_cumsum = arr.cumsum(dim=0)
+        cur_cumsum = arr.cumsum(axis=0)
         cur_norm = cur_cumsum/cur_cumsum.max()
-        min_idx = torch.argwhere(cur_norm >= thresh).flatten().min().item()
+        min_idx = np.argwhere(cur_norm >= thresh).flatten().min()
         # idx of min elt that meets threshold
         # so need to add one
         ret = min_idx + 1
