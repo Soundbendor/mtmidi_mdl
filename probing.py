@@ -88,13 +88,13 @@ def calculate_pca_coeffs(generator, train_subset, cur_mean, cur_stdev, train_siz
             
 
 
-def calculate_proportion_of_variance(configdict, thresh = UC.PROP_VAR_THRESH, device='cpu'):
+def calculate_proportion_of_variance(configdict, thresh = UC.PROP_VAR_THRESH):
 
     num_needed_arr = []
     num_layers = configdict['model_num_layers']
     for layer_idx in range(num_layers):
         np_arr = UP.load_svd_S(configdict, layer_idx)
-        cur_needed = UMN.get_num_needed(torch.from_numpy(np_arr).to(device), thresh)
+        cur_needed = UMN.get_num_needed(np_arr, thresh)
         num_needed_arr.append(cur_needed)
     UP.save_prop_var(num_needed_arr, thresh, configdict)
 
@@ -564,7 +564,7 @@ if __name__ == "__main__":
             cur_success = calc_twonn_curve(layer_idx, datadict, subsetdict, configdict, device=device)
             print(layer_idx, cur_success)
     elif args.prop_var == True:
-        calculate_proportion_of_variance(configdict, thresh = UC.PROP_VAR_THRESH, device=device)
+        calculate_proportion_of_variance(configdict, thresh = UC.PROP_VAR_THRESH)
     elif args.zero_dist == True:
         for layer_idx in range(configdict['model_num_layers']):
             cur_success = get_zero_dists(layer_idx, datadict, subsetdict, configdict, device=device)
