@@ -40,6 +40,8 @@ SVD_S_NONSTANDARD_FOLDER = 'svd_s-nstd'
 SVD_VH_NONSTANDARD_FOLDER = 'svd_vh-nstd'
 SVD_COEFFS_NONSTANDARD_FOLDER = 'svd_coeffs-nstd'
 SVD_CLASS_IDXS_NONSTANDARD_FOLDER = 'svd_clidxs-nstd'
+PROP_VAR_FOLDER = 'prop_var'
+PROP_VAR_NONSTANDARD_FOLDER = 'prop_var-nstd'
 RDB_FOLDER = 'rdb'
 OPT_DIRECTION = 'minimize'
 EARLY_STOPPING_CHECK_INTERVAL = 1
@@ -56,6 +58,7 @@ NUM_CLASS_THRESH = 3
 BATCH_SIZE = 2048
 TWONN_BATCH_SIZE = 1024
 SVD_NUM_COEFFS = 3
+PROP_VAR_THRESH = 0.9
 LEARNING_RATE = 10.**(-2)
 # no l2 weight decay (set to -2 in original which meant turn off)
 DATALOADER_SHUFFLE = True

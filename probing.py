@@ -88,6 +88,15 @@ def calculate_pca_coeffs(generator, train_subset, cur_mean, cur_stdev, train_siz
             
 
 
+def calculate_proportion_of_variance(configdict, thresh = UC.PROP_VAR_THRESH, device='cpu'):
+
+    num_needed_arr = []
+    num_layers = configdict['model_num_layers']
+    for layer_idx in range(num_layers):
+        np_arr = load_svd_S(configdict, layer_idx)
+        cur_needed = UM.get_num_needed(torch.from_numpy(arr).to(device), thresh)
+        num_needed_arr.append(cur_needed)
+    UP.save_prop_var(num_needed_arr, thresh, configdict)
 
 
 def calculate_biased_participation_ratio(generator, train_subset, train_size, cur_mean, cur_stdev, num_classes, configdict, device='cpu'):
@@ -481,6 +490,7 @@ if __name__ == "__main__":
     parser.add_argument("-ms", "--model_size", type=str, default="musicgen-small", help="musicgen-small/musicgen-medium/musicgen-large/jukebox/MERT-v1-95M/MERT-v1-330M/wav2vec2-base/wav2vec2-large")
     parser.add_argument("-et", "--expr_type", type=str, default="mlp", help="experiment type")
     parser.add_argument("-zd", "--zero_dist", type=strtobool, default=False, help="find zero dist embeddings")
+    parser.add_argument("-pvr", "--prop_var", type=strtobool, default=False, help="calculate proportion of variance from saved singular values")
     parser.add_argument("-dbg", "--debug", type=strtobool, default=False, help="debug")
     parser.add_argument("-wdb", "--use_wandb", type=strtobool, default=True, help="sync to wandb")
     parser.add_argument("-cd", "--use_cuda", type=strtobool, default=True, help="use cuda")
@@ -553,6 +563,8 @@ if __name__ == "__main__":
         for layer_idx in range(configdict['model_num_layers']):
             cur_success = calc_twonn_curve(layer_idx, datadict, subsetdict, configdict, device=device)
             print(layer_idx, cur_success)
+    elif args.prop_var == True:
+        calculate_proportion_of_variance(configdict, thresh = UC.PROP_VAR_THRESH, device=device)
     elif args.zero_dist == True:
         for layer_idx in range(configdict['model_num_layers']):
             cur_success = get_zero_dists(layer_idx, datadict, subsetdict, configdict, device=device)

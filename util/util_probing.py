@@ -239,6 +239,26 @@ def save_twonn_sizes(twonn_arr, configdict, layer_idx, class_idx):
     np.save(save_path, np.array(twonn_arr))
 
 
+def load_svd_S(configdict, layer_idx):
+    seed = configdict['seed']
+    split_str = f'sd{seed}_train'
+    layer_str = f'l{layer_idx}'
+    other_str = f'{layer_str}_{split_str}'
+
+    save_path_S = UMN.get_save_path('svd_s', configdict, other=other_str, make_dir = False)
+    return np.load(save_path_S)
+
+
+def save_prop_var(arr, thresh, configdict):
+    thresh_as_pct = int(thresh * 100)
+    seed = configdict['seed']
+    split_str = f'sd{seed}_train'
+    thresh_str = f'thr{thresh_as_pct}'
+    other_str = f'{thresh_str}_{split_str}'
+
+    save_path = UMN.get_save_path('prop_var', configdict, other=other_str, make_dir = True)
+    np.save(save_path_S, np.array(arr))
+
 def save_svd_tup(svd_tup, configdict, layer_idx):
     seed = configdict['seed']
     split_str = f'sd{seed}_train'

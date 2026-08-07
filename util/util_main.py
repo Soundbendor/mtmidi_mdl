@@ -173,8 +173,8 @@ def get_num_needed(arr, thresh):
     if thresh >= 1.:
         ret = arr.shape[0]
     elif thresh > 0.:
-        cur_sort = arr.abs().sort(descending = True)[0]
-        cur_cumsum = cur_sort.cumsum(dim=0)
+        #cur_sort = arr.abs().sort(descending = True)[0]
+        cur_cumsum = arr.cumsum(dim=0)
         cur_norm = cur_cumsum/cur_cumsum.max()
         min_idx = torch.argwhere(cur_norm >= thresh).flatten().min().item()
         # idx of min elt that meets threshold
@@ -283,6 +283,13 @@ def get_save_path(save_type, configdict, other=None, make_dir = True):
             subfolder = UC.SVD_CLASS_IDXS_FOLDER
         else:
             subfolder = UC.SVD_CLASS_IDXS_NONSTANDARD_FOLDER
+        use_expr_type_folder = False
+        ext = 'npy'
+    elif save_type == 'prop_var':
+        if is_nonstandard == False:
+            subfolder = UC.PROP_VAR_FOLDER
+        else:
+            subfolder = UC.PROP_VAR_NONSTANDARD_FOLDER
         use_expr_type_folder = False
         ext = 'npy'
     elif save_type == 'zero_dist':
