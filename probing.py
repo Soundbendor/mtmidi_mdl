@@ -94,7 +94,7 @@ def calculate_proportion_of_variance(configdict, thresh = UC.PROP_VAR_THRESH, de
     num_layers = configdict['model_num_layers']
     for layer_idx in range(num_layers):
         np_arr = UP.load_svd_S(configdict, layer_idx)
-        cur_needed = UMN.get_num_needed(torch.from_numpy(arr).to(device), thresh)
+        cur_needed = UMN.get_num_needed(torch.from_numpy(np_arr).to(device), thresh)
         num_needed_arr.append(cur_needed)
     UP.save_prop_var(num_needed_arr, thresh, configdict)
 
