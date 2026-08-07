@@ -257,7 +257,7 @@ def save_prop_var(arr, thresh, configdict):
     other_str = f'{thresh_str}_{split_str}'
 
     save_path = UMN.get_save_path('prop_var', configdict, other=other_str, make_dir = True)
-    np.save(save_path_S, np.array(arr))
+    np.save(save_path, np.array(arr))
 
 def save_svd_tup(svd_tup, configdict, layer_idx):
     seed = configdict['seed']
