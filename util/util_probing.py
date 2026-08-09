@@ -303,7 +303,7 @@ def save_effective_dim_n1(cur_ed, configdict, layer_idx, class_idx):
 
 
     save_path = UMN.get_save_path('ed_n1', configdict, other=other_str, make_dir = True)
-    np.save(save_path, cur_ed.cpu().numpy())
+    np.save(save_path, cur_ed)
 
 def load_effective_dim_n1(configdict, layer_idx, class_idx):
     seed = configdict['seed']
