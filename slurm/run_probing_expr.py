@@ -33,6 +33,7 @@ if __name__ == "__main__":
     parser.add_argument("-bpr", "--biased_part_rto", type=strtobool, default=False, help="calculate biased participation ratio")
     parser.add_argument("-twn", "--twonn", type=strtobool, default=False, help="calculate twonn")
     parser.add_argument("-upr", "--unbiased_part_rto", type=strtobool, default=False, help="calculate biased participation ratio")
+    parser.add_argument("-ed1", "--effective_dim_n1", type=strtobool, default=False, help="calculate effective dim n1")
     parser.add_argument("-nstd", "--nonstandard", type=strtobool, default=False, help="do not divide data by feature-wise standard deviation")
 
     parser.add_argument("-st", "--stats", type=strtobool, default=False, help="calculate stats")
@@ -78,6 +79,9 @@ if __name__ == "__main__":
                 job_str = f'pca_{job_str}'
             elif args.prop_var == True:
                 job_str = f'pvr_{job_str}'
+            elif args.effective_dim_n1 == True:
+                job_str = f'ed1_{job_str}'
+
             else:
                 job_str = f'mdl_{job_str}'
             slurm_strarr1 = ["#!/bin/bash"]
@@ -91,7 +95,7 @@ if __name__ == "__main__":
                 slurm_strarr2.append(f"#SBATCH -w {args.node}")
             slurm_strarr3 = [f"#SBATCH --mem={args.ram_mem}G", f"#SBATCH --gres=gpu:{args.gpus}", f"#SBATCH -t {args.num_days}-00:00:00", f"#SBATCH --job-name={job_str}", "#SBATCH --export=ALL", f"#SBATCH --output=/nfs/guille/eecs_research/soundbendor/kwand/out_mtmidi_mdl/{job_str}-%j.out", ""]
             slurm_strarr = slurm_strarr1 + slurm_strarr2 + slurm_strarr3
-            p_str = f"python {py_path}  -st {args.stats} -upr {args.unbiased_part_rto}  -bpr {args.biased_part_rto} -twn {args.twonn} -nstd {args.nonstandard} -ds {dataset} -et {args.expr_type} -ms {model_size} -sh {args.from_share} -wdb {args.use_wandb} -cd {args.use_cuda} -sf {args.suffix} -zd {args.zero_dist} -pcl {args.per_class} -pca {args.calc_pca} -pvr {args.prop_var}" 
+            p_str = f"python {py_path}  -st {args.stats} -upr {args.unbiased_part_rto}  -bpr {args.biased_part_rto} -twn {args.twonn} -nstd {args.nonstandard} -ds {dataset} -et {args.expr_type} -ms {model_size} -sh {args.from_share} -wdb {args.use_wandb} -cd {args.use_cuda} -sf {args.suffix} -zd {args.zero_dist} -pcl {args.per_class} -pca {args.calc_pca} -pvr {args.prop_var} -ed1 {args.effective_dim_n1}" 
             slurm_strarr.append(p_str)
             script_fname = f"{start_time}_{job_str}.sh"
             script_path = os.path.join(sh_dir, script_fname)

@@ -88,6 +88,66 @@ def calculate_pca_coeffs(generator, train_subset, cur_mean, cur_stdev, train_siz
             
 
 
+def calculate_effective_dim_n1(generator, train_subset, train_size, cur_mean, cur_stdev, num_classes, configdict, device='cpu'):
+    emb_dim = configdict['model_dim']
+    nstd = configdict['nonstandard']
+    per_class = configdict['per_class'] 
+    shuffle = False
+    successful = True
+        
+    for class_idx in range(num_classes): 
+        if per_class == False and class_idx > 0:
+            break
+        train_dl = TUD.DataLoader(train_subset, batch_size = train_size, shuffle=shuffle, generator=generator)
+        cur_ed = -1 
+        with torch.no_grad():
+            for batch_idx, data in enumerate(train_dl):
+                _ipt0, ground_truth = data
+                if _ipt0.shape[0] != train_size:
+                    print(f'did not load entire split of size {train_size}')
+                    break
+
+                _ipt = None
+                ipt = None
+                if nstd == False:
+                    _ipt = (_ipt0 - cur_mean)/cur_stdev
+                # torch centers in torch.cov
+                """
+                else:
+                    _ipt = (_ipt0 - cur_mean)
+                """
+                if per_class == True:
+                    cur_idxs = torch.where(ground_truth == class_idx)[0]
+                    ipt = _ipt[cur_idxs]
+                else:
+                    ipt = _ipt
+
+                # note that this centers data
+                # rows are vars and columns are observations: (dim x batch size)
+                # (so need to transpose since batch size is first dim)
+                cur_cov = torch.cov(ipt.T) 
+                # alternatively given that ipt is centered
+                # cur_cov = (ipt.T @ ipt)/(train_size - 1)
+                if cur_cov.shape[0] != emb_dim or cur_cov.shape[1] != emb_dim:
+                    print(f'cov matrix did not match emb_dim of size {emb_dim}')
+                    successful = False
+                    break
+                # torch returns complex vals
+                # doesn't matter since symm matrices are PSD so eigvals >= 0
+                ev = torch.linalg.eigvals(cur_cov).real
+                # alternatively, take trace of cur_cov
+                ev_sum = ev.sum()
+                p = ev/ev_sum
+                # natural log
+                cur_entropy = -p * torch.log(p)
+                cur_ed = cur_entropy.sum().item()
+        if cur_ed > 0:
+            UP.save_effective_dim_n1(cur_ed, configdict, layer_idx, class_idx)
+        #print(layer_idx, cur_bpr)
+    return successful
+
+
+
 def calculate_proportion_of_variance(configdict, thresh = UC.PROP_VAR_THRESH):
 
     num_needed_arr = []
@@ -122,16 +182,23 @@ def calculate_biased_participation_ratio(generator, train_subset, train_size, cu
                 ipt = None
                 if nstd == False:
                     _ipt = (_ipt0 - cur_mean)/cur_stdev
+                # torch centers in torch.cov
+                """
                 else:
                     _ipt = (_ipt0 - cur_mean)
-
+                """
                 if per_class == True:
                     cur_idxs = torch.where(ground_truth == class_idx)[0]
                     ipt = _ipt[cur_idxs]
                 else:
                     ipt = _ipt
 
-                cur_cov = (ipt.T @ ipt)/(train_size - 1)
+                # note that this centers data
+                # rows are vars and columns are observations: (dim x batch size)
+                # (so need to transpose since batch size is first dim)
+                cur_cov = torch.cov(ipt.T) 
+                # alternatively given that ipt is centered
+                # cur_cov = (ipt.T @ ipt)/(train_size - 1)
                 if cur_cov.shape[0] != emb_dim or cur_cov.shape[1] != emb_dim:
                     print(f'cov matrix did not match emb_dim of size {emb_dim}')
                     successful = False
@@ -496,6 +563,7 @@ if __name__ == "__main__":
     parser.add_argument("-cd", "--use_cuda", type=strtobool, default=True, help="use cuda")
     parser.add_argument("-st", "--stats", type=strtobool, default=False, help="calculate stats")
     parser.add_argument("-bpr", "--biased_part_rto", type=strtobool, default=False, help="calculate biased participation ratio")
+    parser.add_argument("-ed1", "--effective_dim_n1", type=strtobool, default=False, help="calculate effective dim n1")
     parser.add_argument("-twn", "--twonn", type=strtobool, default=False, help="calculate twonn")
     parser.add_argument("-upr", "--unbiased_part_rto", type=strtobool, default=False, help="calculate biased participation ratio")
     parser.add_argument("-nstd", "--nonstandard", type=strtobool, default = False, help="do not divide data by feature-wise standard deviation")
@@ -547,6 +615,17 @@ if __name__ == "__main__":
             cur_mean = torch.from_numpy(UP.load_mean(configdict, layer_idx)).to(device)
             cur_stdev = torch.from_numpy(UP.load_std(configdict, layer_idx)).to(device)
             successful = calculate_biased_participation_ratio(torch_gen, train_subset, train_size, cur_mean, cur_stdev, datadict['num_classes'], configdict, device=device)
+    elif args.effective_dim_n1 == True:
+        train_subset = subsetdict['preq_all_subset']
+        train_size = subsetdict['preq_all_size']
+        for layer_idx in range(configdict['model_num_layers']): 
+            torch_gen = torch.Generator(device=device)
+            torch_gen.manual_seed(configdict['seed'])
+            train_subset.dataset.set_layer_idx(layer_idx)
+
+            cur_mean = torch.from_numpy(UP.load_mean(configdict, layer_idx)).to(device)
+            cur_stdev = torch.from_numpy(UP.load_std(configdict, layer_idx)).to(device)
+            successful = calculate_effective_dim_n1(torch_gen, train_subset, train_size, cur_mean, cur_stdev, datadict['num_classes'], configdict, device=device)
     elif args.calc_pca == True:
         train_subset = subsetdict['preq_all_subset']
         train_size = subsetdict['preq_all_size']

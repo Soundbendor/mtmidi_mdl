@@ -230,6 +230,19 @@ def get_save_path(save_type, configdict, other=None, make_dir = True):
                 subfolder = UC.BIASED_PART_RTO_NONSTANDARD_FOLDER
         use_expr_type_folder = False
         ext = 'npy'
+    elif save_type == 'ed_n1':
+        if is_nonstandard == False:
+            if per_class == True:
+                subfolder = UC.EFFECTIVE_DIM_N1_PC_FOLDER
+            else:
+                subfolder = UC.EFFECTIVE_DIM_N1_FOLDER
+        else:
+            if per_class == True:
+                subfolder = UC.EFFECTIVE_DIM_N1_PC_NONSTANDARD_FOLDER
+            else:
+                subfolder = UC.EFFECTIVE_DIM_N1_NONSTANDARD_FOLDER
+        use_expr_type_folder = False
+        ext = 'npy'
     elif save_type == 'ub_pr':
         if is_nonstandard == False:
             if per_class == True:

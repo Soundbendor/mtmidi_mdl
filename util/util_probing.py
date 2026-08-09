@@ -290,6 +290,36 @@ def save_svd_clidxs(svd_clidxs, configdict, layer_idx,num_coeffs=3):
     save_path = UMN.get_save_path('svd_clidxs', configdict, other=other_str, make_dir = True)
     np.save(save_path, svd_clidxs.detach().cpu().numpy())
 
+def save_effective_dim_n1(cur_ed, configdict, layer_idx, class_idx):
+    seed = configdict['seed']
+    split_str = f'sd{seed}_train'
+    layer_str = f'l{layer_idx}'
+    other_str = None
+    if configdict['per_class'] == True:
+        ci_str = f'ci{class_idx}'
+        other_str = f'{layer_str}_{ci_str}_{split_str}'
+    else:
+        other_str = f'{layer_str}_{split_str}'
+
+
+    save_path = UMN.get_save_path('ed_n1', configdict, other=other_str, make_dir = True)
+    np.save(save_path, cur_ed.cpu().numpy())
+
+def load_effective_dim_n1(configdict, layer_idx, class_idx):
+    seed = configdict['seed']
+    split_str = f'sd{seed}_train'
+    layer_str = f'l{layer_idx}'
+    other_str = None
+    if configdict['per_class'] == True:
+        ci_str = f'ci{class_idx}'
+        other_str = f'{layer_str}_{ci_str}_{split_str}'
+    else:
+        other_str = f'{layer_str}_{split_str}'
+
+
+    save_path = UMN.get_save_path('ed_n1', configdict, other=other_str, make_dir = False)
+    return np.load(save_path)
+
 
 
 def save_biased_part_rto(cur_pr, configdict, layer_idx, class_idx):
