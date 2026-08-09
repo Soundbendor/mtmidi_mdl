@@ -111,7 +111,9 @@ def calculate_effective_dim_n1(generator, train_subset, train_size, cur_mean, cu
                 ipt = None
                 if nstd == False:
                     _ipt = (_ipt0 - cur_mean)/cur_stdev
-                # torch centers in torch.cov
+                else:
+                    # torch centers in torch.cov
+                    _ipt = _ipt0
                 """
                 else:
                     _ipt = (_ipt0 - cur_mean)
@@ -182,7 +184,9 @@ def calculate_biased_participation_ratio(generator, train_subset, train_size, cu
                 ipt = None
                 if nstd == False:
                     _ipt = (_ipt0 - cur_mean)/cur_stdev
-                # torch centers in torch.cov
+                else:
+                    # torch centers in torch.cov
+                    _ipt = _ipt0
                 """
                 else:
                     _ipt = (_ipt0 - cur_mean)
