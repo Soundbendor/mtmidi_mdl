@@ -141,7 +141,7 @@ def calculate_effective_dim_n1(generator, train_subset, train_size, cur_mean, cu
                 ev_sum = ev.sum()
                 p = ev/ev_sum
                 # natural log
-                cur_entropy = -p * torch.log(p)
+                cur_entropy = torch.nan_to_num(-p * torch.log(p),nan=0.)
                 cur_ed = cur_entropy.sum().item()
         if cur_ed > 0:
             UP.save_effective_dim_n1(np.exp(cur_ed), configdict, layer_idx, class_idx)
