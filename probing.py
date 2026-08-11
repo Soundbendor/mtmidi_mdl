@@ -144,7 +144,9 @@ def calculate_effective_dim_n1(generator, train_subset, train_size, cur_mean, cu
                 cur_entropy = -p * torch.log(p)
                 cur_ed = cur_entropy.sum().item()
         if cur_ed > 0:
-            UP.save_effective_dim_n1(cur_ed, configdict, layer_idx, class_idx)
+            UP.save_effective_dim_n1(np.exp(cur_ed), configdict, layer_idx, class_idx)
+        if per_class == False:
+            print(layer_idx, np.exp(cur_ed))
         #print(layer_idx, cur_bpr)
     return successful
 
@@ -642,6 +644,7 @@ if __name__ == "__main__":
             cur_stdev = torch.from_numpy(UP.load_std(configdict, layer_idx)).to(device)
 
             successful = calculate_pca_coeffs(torch_gen, train_subset, cur_mean, cur_stdev, train_size, configdict)
+            print(layer_idx, cur_success)
     elif args.twonn == True:
         for layer_idx in range(configdict['model_num_layers']):
             cur_success = calc_twonn_curve(layer_idx, datadict, subsetdict, configdict, device=device)
