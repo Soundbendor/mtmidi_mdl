@@ -172,7 +172,7 @@ def plot_per_model_per_ds_across_dim_est(cur_x, cur_ds, model_size, resdict, pro
         else:
             ax.plot(cur_x, prvals/ffn_dim, label=dim_est_name)
     ax.set_xlabel(cur_xlabel)
-    ax.set_ylabel(dim_est_name)
+    ax.set_ylabel("Estimated Dimension")
     ax.set_title(cur_title)
     cur_loc = 'center right'
     ax.legend(loc=cur_loc, bbox_to_anchor=(1,0.5))
