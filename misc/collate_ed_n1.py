@@ -21,14 +21,19 @@ root_folder = UC.PROJECT_ROOT
 dim_est_names = {
              UC.EFFECTIVE_DIM_N1_NONSTANDARD_FOLDER: "ED (n1, non-std.)",
              UC.BIASED_PART_RTO_NONSTANDARD_FOLDER: "ED (n2, non-std.)",
-             UC.PROP_VAR_NONSTANDARD_FOLDER: "Prop. Var. (non-std.)"
+             UC.PROP_VAR_NONSTANDARD_FOLDER: "Prop. Var. (non-std.)",
+             UC.TWONN_FOLDER: "Two-NN (non-std.)"
              }
 
 # skip graphing individual graphs
-skip_folders = set([UC.BIASED_PART_RTO_NONSTANDARD_FOLDER])
+skip_folders = set([UC.BIASED_PART_RTO_NONSTANDARD_FOLDER, UC.TWONN_FOLDER])
 
 # all layers in one npy file
 comp_folders = set([UC.PROP_VAR_NONSTANDARD_FOLDER])
+
+# take last elt
+lastelt_folders = set([UC.TWONN_FOLDER])
+
 dim_est_folders = [x for x in dim_est_names.keys()]
 res_folder = os.path.join(root_folder, UC.RESULTS_FOLDER)
 dses = [x for x in UC.DATASET_SHORT.keys() if x not in exclude_ds]
@@ -45,7 +50,7 @@ for folder in dim_est_folders:
             if folder == UC.PROP_VAR_NONSTANDARD_FOLDER:
                 cur_fname = f'{m}_thr{thresh_pct}_sd{UC.SEED}_{subset}-{suffix}.npy'
                 dim_est_path = os.path.join(cur_ds_folder, cur_fname)
-                cur_dim_est = np.load(dim_est_path)i
+                cur_dim_est = np.load(dim_est_path)
                 res[folder][ds][m] = cur_dim_est
             else:
                 res[folder][ds][m] = np.zeros(num_layers)
@@ -53,7 +58,10 @@ for folder in dim_est_folders:
                     cur_fname = f'{m}_l{l}_sd{UC.SEED}_{subset}-{suffix}.npy'
                     dim_est_path = os.path.join(cur_ds_folder, cur_fname)
                     cur_dim_est = np.load(dim_est_path)
-                    res[folder][ds][m][l] = cur_dim_est
+                    if folder != UC.TWONN_FOLDER:
+                        res[folder][ds][m][l] = cur_dim_est
+                    else:
+                        res[folder][ds][m][l] = cur_dim_est[-1]
 
 def plot_per_model_across_ds(cur_x, dim_est_type, dim_est_name, model_size, dsdict, prop=False):
     model_pprint = UC.MODEL_PPRINT[model_size]
@@ -148,11 +156,11 @@ def plot_per_model_per_ds_across_dim_est(cur_x, cur_ds, model_size, resdict, pro
     model_pprint = UC.MODEL_PPRINT[model_size]
     ds_pprint = UC.DATASET_PPRINT[cur_ds]
     ffn_dim = UC.FFN_DIM[model_size]
-    cur_title = f'EDs For {ds_pprint} Across {model_pprint} Layer Indices'
+    cur_title = f'Est. Dim. For {ds_pprint} Across {model_pprint} Layer Indices'
     fname = f'{model_size}-{cur_ds}-dim_est_all-{suffix}.png'
     subf = 'dim_est-all'
     if prop == True:
-        cur_title = f'PRs For {ds_pprint} (prop.) Across {model_pprint} Layer Indices'
+        cur_title = f'Est. Dim. For {ds_pprint} (prop.) Across {model_pprint} Layer Indices'
         fname = f'{model_size}-{cur_ds}-dim_est_all_prop-{suffix}.png'
         subf = 'dim_est-all_prop'
     cur_xlabel = 'Layer Index (1-indexed)'
