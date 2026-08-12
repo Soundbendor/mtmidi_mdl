@@ -209,13 +209,9 @@ def calculate_biased_participation_ratio(generator, train_subset, train_size, cu
                     print(f'cov matrix did not match emb_dim of size {emb_dim}')
                     successful = False
                     break
-                cur_cov2 = cur_cov @ cur_cov
-                if cur_cov2.shape[0] != emb_dim or cur_cov2.shape[1] != emb_dim:
-                    print(f'cov*cov matrix did not match emb_dim of size {emb_dim}')
-                    successful = False
-                    break
-                cur_nom = torch.pow(torch.trace(cur_cov), 2)
-                cur_denom = torch.trace(cur_cov2)
+                ev = torch.linalg.eigvals(cur_cov).real
+                cur_nom = torch.sum(ev).square()
+                cur_denom = torch.square(ev).sum()
                 cur_bpr = cur_nom/cur_denom
         if cur_bpr > 0:
             UP.save_biased_part_rto(cur_bpr, configdict, layer_idx, class_idx)
