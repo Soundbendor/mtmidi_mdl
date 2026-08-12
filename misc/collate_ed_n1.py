@@ -26,7 +26,8 @@ dim_est_names = {
              }
 
 # skip graphing individual graphs
-skip_folders = set([UC.BIASED_PART_RTO_NONSTANDARD_FOLDER, UC.TWONN_FOLDER])
+#skip_folders = set([UC.BIASED_PART_RTO_NONSTANDARD_FOLDER, UC.TWONN_FOLDER])
+skip_folders = set([UC.TWONN_FOLDER])
 
 # all layers in one npy file
 comp_folders = set([UC.PROP_VAR_NONSTANDARD_FOLDER])
