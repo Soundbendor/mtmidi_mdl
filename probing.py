@@ -44,7 +44,7 @@ def calculate_mean_stdev(generator, train_subset, train_size, emb_dim, shuffle =
                 print(f'did not match emb_dim of size {emb_dim}')
     return _mean, _std
 
-def calculate_pca_coeffs(generator, train_subset, cur_mean, cur_stdev, train_size, configdict):
+def calculate_pca_coeffs(generator, train_subset, cur_mean, cur_stdev, num_classes, train_size, configdict):
     successful = True
     num_coeffs = configdict['pca_num_coeffs']
     pvthresh = configdict['pca_propvar_thresh']
@@ -666,6 +666,7 @@ if __name__ == "__main__":
     elif args.calc_pca == True:
         train_subset = subsetdict['preq_all_subset']
         train_size = subsetdict['preq_all_size']
+        num_classes = datadict['num_classes']
         for layer_idx in range(configdict['model_num_layers']): 
             torch_gen = torch.Generator(device=device)
             torch_gen.manual_seed(configdict['seed'])
@@ -674,7 +675,7 @@ if __name__ == "__main__":
             cur_mean = torch.from_numpy(UP.load_mean(configdict, layer_idx)).to(device)
             cur_stdev = torch.from_numpy(UP.load_std(configdict, layer_idx)).to(device)
 
-            successful = calculate_pca_coeffs(torch_gen, train_subset, cur_mean, cur_stdev, train_size, configdict)
+            successful = calculate_pca_coeffs(torch_gen, train_subset, cur_mean, cur_stdev, num_classes, train_size, configdict)
             print(layer_idx, cur_success)
     elif args.twonn == True:
         for layer_idx in range(configdict['model_num_layers']):
