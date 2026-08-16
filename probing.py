@@ -106,7 +106,18 @@ def calculate_pca_coeffs(generator, train_subset, cur_mean, cur_stdev, train_siz
                 # take transpose to get (batchsize, dim)
                 # since want last num_coeffs, do eigvecs.T[(emb_dim - num_coeffs):]
                 # and gives coeffs (PCA3, PCA2, PCA1)
-                cur_coeffs = cur_eigh.eigenvectors.T[(emb_dim - num_coeffs):] @ ipt.T
+                if per_class == False:
+                    # need to center if working on nonstandardized data
+                    if nstd == True:
+                        cur_coeffs = cur_eigh.eigenvectors.T[(emb_dim - num_coeffs):] @ (ipt - cur_mean).T
+                    else:
+                        cur_coeffs = cur_eigh.eigenvectors.T[(emb_dim - num_coeffs):] @ ipt.T
+                else:
+                    # need to recalculate centers
+                    # might be weird if working on already standardized data? double check if actually running
+                    cur_mean2 = ipt.mean(axis=0)
+                    cur_coeffs = cur_eigh.eigenvectors.T[(emb_dim - num_coeffs):] @ (ipt - cur_mean2).T
+
                 pca_clidxs = ground_truth
 
                 # to calculate proportion of variance, need to flip to sort in descending order

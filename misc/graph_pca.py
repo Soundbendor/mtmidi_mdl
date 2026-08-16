@@ -26,8 +26,8 @@ res_folder = os.path.join(root_folder, UC.RESULTS_FOLDER)
 #dses = [x for x in UC.DATASET_SHORT.keys() if x not in exclude_ds]
 dses = ["polyrhythms", "dynamics", "notes", "scales", "seventh_chords", "time_signatures", "intervals", "simple_progressions", "chords"]
 
-coeff_folder = os.path.join(root_folder, UC.SVD_COEFFS_NONSTANDARD_FOLDER)
-clidx_folder = os.path.join(root_folder, UC.SVD_CLASS_IDXS_NONSTANDARD_FOLDER)
+coeff_folder = os.path.join(root_folder, UC.PCA_COEFFS_NONSTANDARD_FOLDER)
+clidx_folder = os.path.join(root_folder, UC.PCA_CLASS_IDXS_NONSTANDARD_FOLDER)
 
 
 def plot_pca_coeffs(ds, model_size, layer_idx, coeffs, clidxs, max_idx):
@@ -43,7 +43,7 @@ def plot_pca_coeffs(ds, model_size, layer_idx, coeffs, clidxs, max_idx):
     for i in range(max_idx+1):
         want_idxs = np.where(clidxs == i)
         want_coeffs = coeffs[want_idxs]
-        ax.scatter(want_coeffs[:,0], want_coeffs[:,1], want_coeffs[:,2], c=colors[i])
+        ax.scatter(want_coeffs[:,2], want_coeffs[:,1], want_coeffs[:,0], c=colors[i])
     ax.set_xlabel("PC1")
     ax.set_ylabel("PC2")
     ax.set_zlabel("PC3")
