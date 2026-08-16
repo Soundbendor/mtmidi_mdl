@@ -675,7 +675,7 @@ if __name__ == "__main__":
             cur_mean = torch.from_numpy(UP.load_mean(configdict, layer_idx)).to(device)
             cur_stdev = torch.from_numpy(UP.load_std(configdict, layer_idx)).to(device)
 
-            successful = calculate_pca_coeffs(torch_gen, train_subset, cur_mean, cur_stdev, num_classes, train_size, configdict)
+            cur_success = calculate_pca_coeffs(torch_gen, train_subset, cur_mean, cur_stdev, num_classes, train_size, configdict)
             print(layer_idx, cur_success)
     elif args.twonn == True:
         for layer_idx in range(configdict['model_num_layers']):
