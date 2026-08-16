@@ -45,43 +45,80 @@ def calculate_mean_stdev(generator, train_subset, train_size, emb_dim, shuffle =
     return _mean, _std
 
 def calculate_pca_coeffs(generator, train_subset, cur_mean, cur_stdev, train_size, configdict):
-    cur_svd = None
-    cur_coeffs = None
     successful = True
-    num_coeffs = configdict['svd_num_coeffs']
+    num_coeffs = configdict['pca_num_coeffs']
+    pvthresh = configdict['pca_propvar_thresh']
+    emb_dim = configdict['model_dim']
     nstd = configdict['nonstandard']
+    per_class = configdict['per_class'] 
     shuffle = False
-    train_dl = TUD.DataLoader(train_subset, batch_size = train_size, shuffle=shuffle, generator=generator)
-    class_idxs = None
-    with torch.no_grad():
-        for batch_idx, data in enumerate(train_dl):
-            _ipt, ground_truth = data
-            if _ipt.shape[0] != train_size:
-                print(f'did not load entire split of size {train_size}')
-                successful = False
-                break
+    successful = True
+        
+    for class_idx in range(num_classes): 
+        if per_class == False and class_idx > 0:
+            break
+        train_dl = TUD.DataLoader(train_subset, batch_size = train_size, shuffle=shuffle, generator=generator)
+        cur_eigh = None
+        cur_coeffs = None
+        pca_clidxs = None
+        cur_needed
+        with torch.no_grad():
+            for batch_idx, data in enumerate(train_dl):
+                _ipt0, ground_truth = data
+                if _ipt0.shape[0] != train_size:
+                    print(f'did not load entire split of size {train_size}')
+                    break
 
-            ipt = None
-            if nstd == False:
-                ipt = (_ipt - cur_mean)/cur_stdev
-            else:
-                ipt = (_ipt - cur_mean)
-            # train size x dim
-            cur_svd = torch.linalg.svd(_ipt)
-            # U train_size x train_size (train_size x num_coeffs)
-            # S min(train_size, emb_dim) (num_coeffs)
-            # Vh emb_dim x emb_dim (num_coeffs, emb_dim)
-            # ROWS are singular vectors of Vh
-            # thin_vh * X.T (num_coeffs x emb_dim * emb_dim x train_size = num_coeffs x train_size)
-            # take transpose to make train_size x num_coeffs
-            cur_coeffs = (cur_svd.Vh[:num_coeffs] @ ipt.T).T
-            class_idxs = ground_truth
-    if cur_svd != None:
-        UP.save_svd_tup(cur_svd, configdict, layer_idx)
-    if cur_coeffs != None:
-        UP.save_svd_coeffs(cur_coeffs, configdict, layer_idx)
-    if class_idxs != None:
-        UP.save_svd_clidxs(class_idxs, configdict, layer_idx)
+                _ipt = None
+                ipt = None
+                if nstd == False:
+                    _ipt = (_ipt0 - cur_mean)/cur_stdev
+                else:
+                    # torch centers in torch.cov
+                    _ipt = _ipt0
+                """
+                else:
+                    _ipt = (_ipt0 - cur_mean)
+                """
+                if per_class == True:
+                    cur_idxs = torch.where(ground_truth == class_idx)[0]
+                    ipt = _ipt[cur_idxs]
+                else:
+                    ipt = _ipt
+
+                # note that this centers data
+                # rows are vars and columns are observations: (dim x batch size)
+                # (so need to transpose since batch size is first dim)
+                cur_cov = torch.cov(ipt.T) 
+                # alternatively given that ipt is centered
+                # cur_cov = (ipt.T @ ipt)/(train_size - 1)
+                if cur_cov.shape[0] != emb_dim or cur_cov.shape[1] != emb_dim:
+                    print(f'cov matrix did not match emb_dim of size {emb_dim}')
+                    successful = False
+                    break
+                cur_eigh = torch.linalg.eigh(cur_cov)
+                #https://docs.pytorch.org/docs/2.13/generated/torch.linalg.eigh.html
+                # returns eigenvalues in ASCENDING order
+                # and eigenvectors as COLUMNS
+                # so to get projections onto eigenvectors
+                # mutiply eigvecs.T with ipt.T
+                # ((dim,dim) x (dim,batchsize)) = (dim, batchsize)
+                # take transpose to get (batchsize, dim)
+                # since want last num_coeffs, do eigvecs.T[(emb_dim - num_coeffs):]
+                # and gives coeffs (PCA3, PCA2, PCA1)
+                cur_coeffs = cur_eigh.eigenvectors.T[(emb_dim - num_coeffs):] @ ipt.T
+                pca_clidxs = ground_truth
+
+                # to calculate proportion of variance, need to flip to sort in descending order
+                cur_needed = UMN.get_num_needed(cur_eigh.eigenvalues.flip(dims=(0,)).numpy(), pvthresh)
+        if cur_eigh != None:
+            UP.save_pca_tup(cur_eigh, configdict, layer_idx, class_idx)
+        if cur_coeffs != None:
+            UP.save_pca_coeffs(cur_coeffs, configdict, layer_idx, class_idx, num_coeffs=num_coeffs)
+        if class_idxs != None:
+            UP.save_pca_clidxs(pca_clidxs, configdict, layer_idx, class_idx, num_coeffs = num_coeffs)
+        if cur_needed != None:
+            UP.save_pca_propvar(cur_needed, configdict, layer_idx, class_idx)
 
     return successful
 
@@ -149,18 +186,6 @@ def calculate_effective_dim_n1(generator, train_subset, train_size, cur_mean, cu
             print(layer_idx, np.exp(cur_ed))
         #print(layer_idx, cur_bpr)
     return successful
-
-
-
-def calculate_proportion_of_variance(configdict, thresh = UC.PROP_VAR_THRESH):
-
-    num_needed_arr = []
-    num_layers = configdict['model_num_layers']
-    for layer_idx in range(num_layers):
-        np_arr = UP.load_svd_S(configdict, layer_idx)
-        cur_needed = UMN.get_num_needed(np.square(np_arr), thresh)
-        num_needed_arr.append(cur_needed)
-    UP.save_prop_var(num_needed_arr, thresh, configdict)
 
 
 def calculate_biased_participation_ratio(generator, train_subset, train_size, cur_mean, cur_stdev, num_classes, configdict, device='cpu'):
@@ -559,7 +584,6 @@ if __name__ == "__main__":
     parser.add_argument("-ms", "--model_size", type=str, default="musicgen-small", help="musicgen-small/musicgen-medium/musicgen-large/jukebox/MERT-v1-95M/MERT-v1-330M/wav2vec2-base/wav2vec2-large")
     parser.add_argument("-et", "--expr_type", type=str, default="mlp", help="experiment type")
     parser.add_argument("-zd", "--zero_dist", type=strtobool, default=False, help="find zero dist embeddings")
-    parser.add_argument("-pvr", "--prop_var", type=strtobool, default=False, help="calculate proportion of variance from saved singular values")
     parser.add_argument("-dbg", "--debug", type=strtobool, default=False, help="debug")
     parser.add_argument("-wdb", "--use_wandb", type=strtobool, default=True, help="sync to wandb")
     parser.add_argument("-cd", "--use_cuda", type=strtobool, default=True, help="use cuda")
@@ -645,8 +669,6 @@ if __name__ == "__main__":
         for layer_idx in range(configdict['model_num_layers']):
             cur_success = calc_twonn_curve(layer_idx, datadict, subsetdict, configdict, device=device)
             print(layer_idx, cur_success)
-    elif args.prop_var == True:
-        calculate_proportion_of_variance(configdict, thresh = UC.PROP_VAR_THRESH)
     elif args.zero_dist == True:
         for layer_idx in range(configdict['model_num_layers']):
             cur_success = get_zero_dists(layer_idx, datadict, subsetdict, configdict, device=device)

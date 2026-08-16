@@ -39,16 +39,31 @@ EFFECTIVE_DIM_N1_PC_FOLDER = 'ed_n1-pc'
 EFFECTIVE_DIM_N1_PC_NONSTANDARD_FOLDER = 'ed_n1-pc-nstd'
 
 
-SVD_S_FOLDER = 'svd_s'
-SVD_VH_FOLDER = 'svd_vh'
-SVD_COEFFS_FOLDER = 'svd_coeffs'
-SVD_CLASS_IDXS_FOLDER = 'svd_clidxs'
-SVD_S_NONSTANDARD_FOLDER = 'svd_s-nstd'
-SVD_VH_NONSTANDARD_FOLDER = 'svd_vh-nstd'
-SVD_COEFFS_NONSTANDARD_FOLDER = 'svd_coeffs-nstd'
-SVD_CLASS_IDXS_NONSTANDARD_FOLDER = 'svd_clidxs-nstd'
-PROP_VAR_FOLDER = 'prop_var'
-PROP_VAR_NONSTANDARD_FOLDER = 'prop_var-nstd'
+PCA_D_FOLDER = 'pca_d'
+PCA_Q_FOLDER = 'pca_q'
+PCA_COEFFS_FOLDER = 'pca_coeffs'
+PCA_CLASS_IDXS_FOLDER = 'pca_clidxs'
+PCA_D_NONSTANDARD_FOLDER = 'pca_d-nstd'
+PCA_Q_NONSTANDARD_FOLDER = 'pca_q-nstd'
+PCA_COEFFS_NONSTANDARD_FOLDER = 'pca_coeffs-nstd'
+PCA_CLASS_IDXS_NONSTANDARD_FOLDER = 'pca_clidxs-nstd'
+
+PCA_D_PC_FOLDER = 'pca_d-pc'
+PCA_Q_PC_FOLDER = 'pca_q-pc'
+PCA_COEFFS_PC_FOLDER = 'pca_coeffs-pc'
+PCA_CLASS_IDXS_PC_FOLDER = 'pca_clidxs-pc'
+PCA_D_PC_NONSTANDARD_FOLDER = 'pca_d-pc-nstd'
+PCA_Q_PC_NONSTANDARD_FOLDER = 'pca_q-pc-nstd'
+PCA_COEFFS_PC_NONSTANDARD_FOLDER = 'pca_coeffs-pc-nstd'
+PCA_CLASS_IDXS_PC_NONSTANDARD_FOLDER = 'pca_clidxs-pc-nstd'
+
+
+
+PCA_PROPVAR_FOLDER = 'pca_propvar'
+PCA_PROPVAR_NONSTANDARD_FOLDER = 'pca_propvar-nstd'
+PCA_PROPVAR_PC_FOLDER = 'pca_propvar-pc'
+PCA_PROPVAR_PC_NONSTANDARD_FOLDER = 'pca_propvar-pc-nstd'
+
 RDB_FOLDER = 'rdb'
 OPT_DIRECTION = 'minimize'
 EARLY_STOPPING_CHECK_INTERVAL = 1
@@ -64,8 +79,8 @@ TEST_SUBPCT = 0.5
 NUM_CLASS_THRESH = 3
 BATCH_SIZE = 2048
 TWONN_BATCH_SIZE = 1024
-SVD_NUM_COEFFS = 3
-PROP_VAR_THRESH = 0.9
+PCA_NUM_COEFFS = 3
+PCA_PROPVAR_THRESH = 0.9
 LEARNING_RATE = 10.**(-2)
 # no l2 weight decay (set to -2 in original which meant turn off)
 DATALOADER_SHUFFLE = True

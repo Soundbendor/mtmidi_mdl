@@ -217,6 +217,71 @@ def get_save_path(save_type, configdict, other=None, make_dir = True):
     elif save_type == 'model':
         subfolder = UC.MODELS_FOLDER
         ext = 'model_dict'
+    elif save_type == 'pca_d':
+        if is_nonstandard == False:
+            if per_class == True:
+                subfolder = UC.PCA_D_PC_FOLDER
+            else:
+                subfolder = UC.PCA_D_FOLDER
+        else:
+            if per_class == True:
+                subfolder = UC.PCA_D_PC_NONSTANDARD_FOLDER
+            else:
+                subfolder = UC.PCA_D_NONSTANDARD_FOLDER
+        use_expr_type_folder = False
+        ext = 'npy'
+    elif save_type == 'pca_q':
+        if is_nonstandard == False:
+            if per_class == True:
+                subfolder = UC.PCA_Q_PC_FOLDER
+            else:
+                subfolder = UC.PCA_Q_FOLDER
+        else:
+            if per_class == True:
+                subfolder = UC.PCA_Q_PC_NONSTANDARD_FOLDER
+            else:
+                subfolder = UC.PCA_Q_NONSTANDARD_FOLDER
+        use_expr_type_folder = False
+        ext = 'npy'
+    elif save_type == 'pca_coeffs':
+        if is_nonstandard == False:
+            if per_class == True:
+                subfolder = UC.PCA_COEFFS_PC_FOLDER
+            else:
+                subfolder = UC.PCA_COEFFS_FOLDER
+        else:
+            if per_class == True:
+                subfolder = UC.PCA_COEFFS_PC_NONSTANDARD_FOLDER
+            else:
+                subfolder = UC.PCA_COEFFS_NONSTANDARD_FOLDER
+        use_expr_type_folder = False
+        ext = 'npy'
+    elif save_type == 'pca_clidxs':
+        if is_nonstandard == False:
+            if per_class == True:
+                subfolder = UC.PCA_CLASS_IDXS_PC_FOLDER
+            else:
+                subfolder = UC.PCA_CLASS_IDXS_FOLDER
+        else:
+            if per_class == True:
+                subfolder = UC.PCA_CLASS_IDXS_PC_NONSTANDARD_FOLDER
+            else:
+                subfolder = UC.PCA_CLASS_IDXS_NONSTANDARD_FOLDER
+        use_expr_type_folder = False
+        ext = 'npy'
+    elif save_type == 'pca_propvar':
+        if is_nonstandard == False:
+            if per_class == True:
+                subfolder = UC.PCA_PROPVAR_PC_FOLDER
+            else:
+                subfolder = UC.PCA_PROPVAR_FOLDER
+        else:
+            if per_class == True:
+                subfolder = UC.PCA_PROPVAR_PC_NONSTANDARD_FOLDER
+            else:
+                subfolder = UC.PCA_PROPVAR_NONSTANDARD_FOLDER
+        use_expr_type_folder = False
+        ext = 'npy'
     elif save_type == 'b_pr':
         if is_nonstandard == False:
             if per_class == True:
@@ -268,41 +333,6 @@ def get_save_path(save_type, configdict, other=None, make_dir = True):
             subfolder = UC.TWONN_PC_SIZE_FOLDER
         else:
             subfolder = UC.TWONN_SIZE_FOLDER
-        use_expr_type_folder = False
-        ext = 'npy'
-    elif save_type == 'svd_s':
-        if is_nonstandard == False:
-            subfolder = UC.SVD_S_FOLDER
-        else:
-            subfolder = UC.SVD_S_NONSTANDARD_FOLDER
-        use_expr_type_folder = False
-        ext = 'npy'
-    elif save_type == 'svd_vh':
-        if is_nonstandard == False:
-            subfolder = UC.SVD_VH_FOLDER
-        else:
-            subfolder = UC.SVD_VH_NONSTANDARD_FOLDER
-        use_expr_type_folder = False
-        ext = 'npy'
-    elif save_type == 'svd_coeffs':
-        if is_nonstandard == False:
-            subfolder = UC.SVD_COEFFS_FOLDER
-        else:
-            subfolder = UC.SVD_COEFFS_NONSTANDARD_FOLDER
-        use_expr_type_folder = False
-        ext = 'npy'
-    elif save_type == 'svd_clidxs':
-        if is_nonstandard == False:
-            subfolder = UC.SVD_CLASS_IDXS_FOLDER
-        else:
-            subfolder = UC.SVD_CLASS_IDXS_NONSTANDARD_FOLDER
-        use_expr_type_folder = False
-        ext = 'npy'
-    elif save_type == 'prop_var':
-        if is_nonstandard == False:
-            subfolder = UC.PROP_VAR_FOLDER
-        else:
-            subfolder = UC.PROP_VAR_NONSTANDARD_FOLDER
         use_expr_type_folder = False
         ext = 'npy'
     elif save_type == 'zero_dist':

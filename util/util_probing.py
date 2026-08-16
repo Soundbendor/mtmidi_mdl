@@ -21,7 +21,8 @@ def build_config(parser_args, datadict):
     _config['model_dim'] = model_shape[1]
     _config['model_num_layers'] = model_shape[0]
     _config['dataloader_shuffle'] = UC.DATALOADER_SHUFFLE
-    _config['svd_num_coeffs'] = UC.SVD_NUM_COEFFS
+    _config['pca_num_coeffs'] = UC.PCA_NUM_COEFFS
+    _config['pca_propvar_thresh'] = UC.PCA_PROPVAR_THRESH
     if parser_args.expr_type == 'mlp':
         _config['probe_hidden_dims'] = UC.MLPPROBE_HIDDEN_DIMS
     elif parser_args.expr_type == 'linear':
@@ -239,56 +240,86 @@ def save_twonn_sizes(twonn_arr, configdict, layer_idx, class_idx):
     np.save(save_path, np.array(twonn_arr))
 
 
-def load_svd_S(configdict, layer_idx):
+def load_pca_D(configdict, layer_idx, class_idx):
     seed = configdict['seed']
     split_str = f'sd{seed}_train'
     layer_str = f'l{layer_idx}'
-    other_str = f'{layer_str}_{split_str}'
+    other_str = None
+    if configdict['per_class'] == True:
+        ci_str = f'ci{class_idx}'
+        other_str = f'{layer_str}_{ci_str}_{split_str}'
+    else:
+        other_str = f'{layer_str}_{split_str}'
 
-    save_path_S = UMN.get_save_path('svd_s', configdict, other=other_str, make_dir = False)
-    return np.load(save_path_S)
+    save_path_D = UMN.get_save_path('pca_d', configdict, other=other_str, make_dir = False)
+    return np.load(save_path_D)
 
 
-def save_prop_var(arr, thresh, configdict):
+def save_pca_propvar(cur_needed, configdict, layer_idx, class_idx):
+    thresh = configdict['pca_propvar_thresh']
     thresh_as_pct = int(thresh * 100)
     seed = configdict['seed']
     split_str = f'sd{seed}_train'
+    layer_str = f'l{layer_idx}'
     thresh_str = f'thr{thresh_as_pct}'
-    other_str = f'{thresh_str}_{split_str}'
+    other_str = None
+    if configdict['per_class'] == True:
+        ci_str = f'ci{class_idx}'
+        other_str = f'{layer_str}_{thresh_str}_{ci_str}_{split_str}'
+    else:
+        other_str = f'{layer_str}_{thresh_str}_{split_str}'
 
-    save_path = UMN.get_save_path('prop_var', configdict, other=other_str, make_dir = True)
-    np.save(save_path, np.array(arr))
+    save_path = UMN.get_save_path('pca_propvar', configdict, other=other_str, make_dir = True)
+    np.save(save_path, cur_needed)
 
-def save_svd_tup(svd_tup, configdict, layer_idx):
+def save_pca_tup(cur_eigh, configdict, layer_idx, class_idx):
     seed = configdict['seed']
     split_str = f'sd{seed}_train'
     layer_str = f'l{layer_idx}'
-    other_str = f'{layer_str}_{split_str}'
+    other_str = None
+    if configdict['per_class'] == True:
+        ci_str = f'ci{class_idx}'
+        other_str = f'{layer_str}_{ci_str}_{split_str}'
+    else:
+        other_str = f'{layer_str}_{split_str}'
 
-    save_path_S = UMN.get_save_path('svd_s', configdict, other=other_str, make_dir = True)
-    save_path_Vh = UMN.get_save_path('svd_vh', configdict, other=other_str, make_dir = True)
-    np.save(save_path_S, svd_tup.S.detach().cpu().numpy())
-    np.save(save_path_Vh, svd_tup.Vh.detach().cpu().numpy())
+    save_path_D = UMN.get_save_path('pca_d', configdict, other=other_str, make_dir = True)
+    save_path_Q = UMN.get_save_path('pca_q', configdict, other=other_str, make_dir = True)
+    np.save(save_path_D, cur_eigh.eigenvalues.detach().cpu().numpy())
+    np.save(save_path_Q, cur_eigh.eigenvectors.detach().cpu().numpy())
 
-def save_svd_coeffs(svd_coeffs, configdict, layer_idx,num_coeffs=3):
+
+
+def save_pca_coeffs(pca_coeffs, configdict, layer_idx, class_idx, num_coeffs=3):
     seed = configdict['seed']
     split_str = f'sd{seed}_train'
     layer_str = f'l{layer_idx}'
     coeff_str = f'nc{num_coeffs}'
-    other_str = f'{layer_str}_{coeff_str}_{split_str}'
+    other_str = None
+    if configdict['per_class'] == True:
+        ci_str = f'ci{class_idx}'
+        other_str = f'{layer_str}_{coeff_str}_{ci_str}_{split_str}'
+    else:
+        other_str = f'{layer_str}_{coeff_str}_{split_str}'
 
-    save_path = UMN.get_save_path('svd_coeffs', configdict, other=other_str, make_dir = True)
-    np.save(save_path, svd_coeffs.detach().cpu().numpy())
 
-def save_svd_clidxs(svd_clidxs, configdict, layer_idx,num_coeffs=3):
+    save_path = UMN.get_save_path('pca_coeffs', configdict, other=other_str, make_dir = True)
+    np.save(save_path, pca_coeffs.detach().cpu().numpy())
+
+def save_pca_clidxs(pca_clidxs, configdict, layer_idx, class_idx, num_coeffs=3):
     seed = configdict['seed']
     split_str = f'sd{seed}_train'
     layer_str = f'l{layer_idx}'
     coeff_str = f'nc{num_coeffs}'
-    other_str = f'{layer_str}_{coeff_str}_{split_str}'
+    other_str = None
+    if configdict['per_class'] == True:
+        ci_str = f'ci{class_idx}'
+        other_str = f'{layer_str}_{coeff_str}_{ci_str}_{split_str}'
+    else:
+        other_str = f'{layer_str}_{coeff_str}_{split_str}'
 
-    save_path = UMN.get_save_path('svd_clidxs', configdict, other=other_str, make_dir = True)
-    np.save(save_path, svd_clidxs.detach().cpu().numpy())
+    save_path = UMN.get_save_path('pca_clidxs', configdict, other=other_str, make_dir = True)
+    np.save(save_path, pca_clidxs.detach().cpu().numpy())
 
 def save_effective_dim_n1(cur_ed, configdict, layer_idx, class_idx):
     seed = configdict['seed']
