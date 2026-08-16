@@ -126,7 +126,7 @@ def calculate_pca_coeffs(generator, train_subset, cur_mean, cur_stdev, num_class
             UP.save_pca_tup(cur_eigh, configdict, layer_idx, class_idx)
         if cur_coeffs != None:
             UP.save_pca_coeffs(cur_coeffs, configdict, layer_idx, class_idx, num_coeffs=num_coeffs)
-        if class_idxs != None:
+        if pca_clidxs != None:
             UP.save_pca_clidxs(pca_clidxs, configdict, layer_idx, class_idx, num_coeffs = num_coeffs)
         if cur_needed != None:
             UP.save_pca_propvar(cur_needed, configdict, layer_idx, class_idx)
