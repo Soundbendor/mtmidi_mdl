@@ -61,7 +61,7 @@ def calculate_pca_coeffs(generator, train_subset, cur_mean, cur_stdev, train_siz
         cur_eigh = None
         cur_coeffs = None
         pca_clidxs = None
-        cur_needed
+        cur_needed = None
         with torch.no_grad():
             for batch_idx, data in enumerate(train_dl):
                 _ipt0, ground_truth = data
@@ -114,7 +114,7 @@ def calculate_pca_coeffs(generator, train_subset, cur_mean, cur_stdev, train_siz
                         cur_coeffs = cur_eigh.eigenvectors.T[(emb_dim - num_coeffs):] @ ipt.T
                 else:
                     # need to recalculate centers
-                    # might be weird if working on already standardized data? double check if actually running
+                    # might be weird if working on already standardized data? double check if actually running these exprs
                     cur_mean2 = ipt.mean(axis=0)
                     cur_coeffs = cur_eigh.eigenvectors.T[(emb_dim - num_coeffs):] @ (ipt - cur_mean2).T
 
