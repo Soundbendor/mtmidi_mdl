@@ -121,7 +121,7 @@ def calculate_pca_coeffs(generator, train_subset, cur_mean, cur_stdev, num_class
                 pca_clidxs = ground_truth
 
                 # to calculate proportion of variance, need to flip to sort in descending order
-                cur_needed = UMN.get_num_needed(cur_eigh.eigenvalues.flip(dims=(0,)).numpy(), pvthresh)
+                cur_needed = UMN.get_num_needed(cur_eigh.eigenvalues.flip(dims=(0,)).cpu().numpy(), pvthresh)
         if cur_eigh != None:
             UP.save_pca_tup(cur_eigh, configdict, layer_idx, class_idx)
         if cur_coeffs != None:
