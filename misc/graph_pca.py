@@ -72,7 +72,8 @@ for ds in dses:
             clidx_path = os.path.join(clidx_ds_folder, cur_fname)
             cur_coeffs = np.load(coeff_path)
             cur_clidxs = np.load(clidx_path)
+            #print(cur_coeffs.shape, cur_clidxs.shape)
             max_idx = cur_clidxs.max()
-            plot_pca_coeffs(ds, m, l, cur_coeffs, cur_clidxs, max_idx)
+            plot_pca_coeffs(ds, m, l, cur_coeffs.T, cur_clidxs, max_idx)
             
 
