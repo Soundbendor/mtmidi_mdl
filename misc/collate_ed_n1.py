@@ -21,7 +21,7 @@ root_folder = UC.PROJECT_ROOT
 dim_est_names = {
              UC.EFFECTIVE_DIM_N1_NONSTANDARD_FOLDER: "ED (n1, non-std.)",
              UC.BIASED_PART_RTO_NONSTANDARD_FOLDER: "ED (n2, non-std.)",
-             UC.PROP_VAR_NONSTANDARD_FOLDER: "Prop. Var. (non-std.)",
+             UC.PCA_PROPVAR_NONSTANDARD_FOLDER: "Prop. Var. (non-std.)",
              UC.TWONN_FOLDER: "Two-NN (non-std.)"
              }
 
@@ -48,21 +48,17 @@ for folder in dim_est_folders:
         res[folder][ds] = {}
         for m in models:
             num_layers = UC.MODEL_NUM_LAYERS[m]
-            if folder == UC.PROP_VAR_NONSTANDARD_FOLDER:
-                cur_fname = f'{m}_thr{thresh_pct}_sd{UC.SEED}_{subset}-{suffix}.npy'
+            res[folder][ds][m] = np.zeros(num_layers)
+            for l in range(num_layers):
+                cur_fname = f'{m}_l{l}_sd{UC.SEED}_{subset}-{suffix}.npy'
+                if folder == UC.PCA_PROPVAR_NONSTANDARD_FOLDER:
+                    cur_fname = f'{m}_l{l}_thr{thresh_pct}_sd{UC.SEED}_{subset}-{suffix}.npy'
                 dim_est_path = os.path.join(cur_ds_folder, cur_fname)
                 cur_dim_est = np.load(dim_est_path)
-                res[folder][ds][m] = cur_dim_est
-            else:
-                res[folder][ds][m] = np.zeros(num_layers)
-                for l in range(num_layers):
-                    cur_fname = f'{m}_l{l}_sd{UC.SEED}_{subset}-{suffix}.npy'
-                    dim_est_path = os.path.join(cur_ds_folder, cur_fname)
-                    cur_dim_est = np.load(dim_est_path)
-                    if folder != UC.TWONN_FOLDER:
-                        res[folder][ds][m][l] = cur_dim_est
-                    else:
-                        res[folder][ds][m][l] = cur_dim_est[-1]
+                if folder != UC.TWONN_FOLDER:
+                    res[folder][ds][m][l] = cur_dim_est
+                else:
+                    res[folder][ds][m][l] = cur_dim_est[-1]
 
 def plot_per_model_across_ds(cur_x, dim_est_type, dim_est_name, model_size, dsdict, prop=False):
     model_pprint = UC.MODEL_PPRINT[model_size]
