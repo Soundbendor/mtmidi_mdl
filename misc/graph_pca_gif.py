@@ -9,7 +9,8 @@ from util import util_optuna as UO
 import sys
 from PIL import Image, ImageDraw
 
-
+across_model = True
+across_ds = True
 PCA_FOLDER = 'pca'
 GIF_FOLDER = 'res_gif'
 GRAPH_FOLDER = 'res_graph'
@@ -32,21 +33,38 @@ pca_gif_folder = os.path.join(root_folder, GIF_FOLDER, PCA_FOLDER)
 dses = ["polyrhythms", "dynamics", "notes", "scales", "seventh_chords", "time_signatures", "intervals", "simple_progressions", "chords"]
 #dses = ['polyrhythms']
 
-for ds in dses:
-    ds_src_folder = os.path.join(pca_graph_folder, ds)
-    ds_dest_folder = UMN.by_projpath_multi(subpaths=[GIF_FOLDER, PCA_FOLDER, ds],make_dir = True)
+if across_ds == True:
+    for ds in dses:
+        ds_src_folder = os.path.join(pca_graph_folder, ds)
+        ds_dest_folder = UMN.by_projpath_multi(subpaths=[GIF_FOLDER, PCA_FOLDER, ds],make_dir = True)
+        for m in models:
+            img_arr = []
+            outf = f'{m}_sd{seed}_{subset}-{suffix}.gif'
+            outpath = os.path.join(ds_dest_folder, outf)
+            num_layers = UC.MODEL_NUM_LAYERS[m]
+            for l in range(num_layers):
+                infile = f'l{l}_sd{seed}_{subset}-{suffix}.png'
+                inpath = os.path.join(ds_src_folder, m, infile)
+                img_arr.append(Image.open(inpath))
+            img_arr[0].save(outpath, save_all=True, append_images=img_arr[1:], duration=dur, loop= loop)
+            for im in img_arr:
+                im.close()
+
+if across_model == True:
     for m in models:
-        img_arr = []
-        outf = f'{m}_sd{seed}_{subset}-{suffix}.gif'
-        outpath = os.path.join(ds_dest_folder, outf)
         num_layers = UC.MODEL_NUM_LAYERS[m]
         for l in range(num_layers):
-            infile = f'l{l}_sd{seed}_{subset}-{suffix}.png'
-            inpath = os.path.join(ds_src_folder, m, infile)
-            img_arr.append(Image.open(inpath))
-        img_arr[0].save(outpath, save_all=True, append_images=img_arr[1:], duration=dur, loop= loop)
-        for im in img_arr:
-            im.close()
+            img_arr = []
+            outf = f'l{l}_sd{seed}_{subset}-{suffix}.gif'
+            m_dest_folder = UMN.by_projpath_multi(subpaths=[GIF_FOLDER, PCA_FOLDER, m],make_dir = True)
+            outpath = os.path.join(m_dest_folder, outf)
+            for ds in dses:
+                ds_src_folder = os.path.join(pca_graph_folder, ds)
+                infile = f'l{l}_sd{seed}_{subset}-{suffix}.png'
+                inpath = os.path.join(ds_src_folder, m, infile)
+                img_arr.append(Image.open(inpath))
+            img_arr[0].save(outpath, save_all=True, append_images=img_arr[1:], duration=dur, loop= loop)
+            for im in img_arr:
+                im.close()
 
 
-        
