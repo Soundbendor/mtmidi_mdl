@@ -17,10 +17,11 @@ if __name__ == "__main__":
     parser.add_argument("-ds", "--datasets", nargs="+", type=str, default=["polyrhythms", "secondary_dominants", "dynamics", "seventh_chords", "mode_mixture"], help="datasets")
     parser.add_argument("-nd", "--num_days", type=int, default=1, help="number of days")
     parser.add_argument("-pt", "--partition", type=str, default="preempt", help="partition to run on")
+    parser.add_argument("-no", "--node", type=str, default="", help="node to run on")
     parser.add_argument("-ms", "--model_sizes", nargs="+", type=str, default=["MERT-v1-95M", "MERT-v1-330M"], help="musicgen-small/musicgen-medium/musicgen-large/jukebox/baseline-chroma/baseline-concat/baseline-mel/baseline-mfcc")
     parser.add_argument("-l", "--layer_num", type=int, default=-1, help="1-indexed layer num (all if < 0, for jukebox)")
     parser.add_argument("-fsh", "--from_share", type=strtobool, default=True, help="load from share partition")
-    parser.add_argument("-tsh", "--to_share", type=strtobool, default=False, help="save to share partition")
+    parser.add_argument("-tsh", "--to_share", type=strtobool, default=True, help="save to share partition")
     parser.add_argument("-m", "--memmap", type=strtobool, default=True, help="save as memmap, else save as npy")
     parser.add_argument("-ub", "--use_64bit", type=strtobool, default=False, help="use 64 bit")
     parser.add_argument("-db", "--debug", type=strtobool, default=False, help="debug mode")
@@ -62,6 +63,8 @@ if __name__ == "__main__":
                     slurm_strarr2 = ['#SBATCH -A eecs', f"#SBATCH -p {args.partition}"]
                 else:
                     slurm_strarr2 = ['#SBATCH -A soundbendor', f"#SBATCH -p {args.partition}"]
+            if len(args.node) > 0:
+                slurm_strarr2.append(f"#SBATCH -w {args.node}")
             slurm_strarr3 = [f"#SBATCH --mem={args.ram_mem}G", f"#SBATCH --gres=gpu:{args.gpus}", f"#SBATCH -t {args.num_days}-00:00:00", f"#SBATCH --job-name={job_str}", "#SBATCH --export=ALL", f"#SBATCH --output=/nfs/guille/eecs_research/soundbendor/kwand/out_mtmidi_prb/{job_str}-%j.out", ""]
             slurm_strarr = slurm_strarr1 + slurm_strarr2 + slurm_strarr3
             p_str = f"python {py_path} -ds {dataset} -ms {model_size} -fsh {args.from_share} -tsh {args.to_share} -ub {args.use_64bit} -n {cur_normalize} -l {args.layer_num} -m {args.memmap} -db {args.debug} -p {args.pickup} -fn {args.fold_num}" 

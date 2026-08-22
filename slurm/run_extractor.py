@@ -21,7 +21,7 @@ if __name__ == "__main__":
     parser.add_argument("-ms", "--model_sizes", nargs="+", type=str, default=["MERT-v1-95M", "MERT-v1-330M"], help="musicgen-small/musicgen-medium/musicgen-large/jukebox/baseline-chroma/baseline-concat/baseline-mel/baseline-mfcc")
     parser.add_argument("-l", "--layer_num", type=int, default=-1, help="1-indexed layer num (all if < 0, for jukebox)")
     parser.add_argument("-fsh", "--from_share", type=strtobool, default=True, help="load from share partition")
-    parser.add_argument("-tsh", "--to_share", type=strtobool, default=False, help="save to share partition")
+    parser.add_argument("-tsh", "--to_share", type=strtobool, default=True, help="save to share partition")
     parser.add_argument("-m", "--memmap", type=strtobool, default=True, help="save as memmap, else save as npy")
     parser.add_argument("-ub", "--use_64bit", type=strtobool, default=False, help="use 64 bit")
     parser.add_argument("-db", "--debug", type=strtobool, default=False, help="debug mode")
