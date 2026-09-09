@@ -101,7 +101,7 @@ def path_handler(in_filepath, using_hf=False, model_sr = 44100, dur = UC.WAV_DUR
         # don't need to load audio if jukebox
         audio = UMN.load_wav(in_filepath, dur = dur, normalize = normalize, sr = model_sr)
     else:
-        hf_path = in_filepath['audio']['path']
+        hf_path = UHF.get_from_entry_path(in_filepath) 
         print(f"loading {hf_path}", file=lf)
         out_fname = UMN.ext_replace(hf_path, new_ext=out_ext)
         fbasename = UMN.ext_replace(hf_path, new_ext='')

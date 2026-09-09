@@ -96,7 +96,7 @@ def path_handler(in_filepath, using_hf=False, model_sr = 44100, dur = UC.WAV_DUR
         # don't need to load audio if jukebox
         audio = UMN.load_wav(in_filepath, dur = dur, normalize = normalize, sr = model_sr)
     else:
-        hf_path = in_filepath['audio']['path']
+        hf_path = UHF.get_from_entry_path(in_filepath) 
         print(f"loading {hf_path}", file=lf)
         out_fname = UMN.ext_replace(hf_path, new_ext=out_ext)
         fbasename = UMN.ext_replace(hf_path, new_ext='')
@@ -194,7 +194,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-ub", "--use_64bit", type=strtobool, default=False, help="use 64-bit")
     parser.add_argument("-ds", "--dataset", type=str, default="polyrhythms", help="dataset")
-    parser.add_argument("-ms", "--model_size", type=str, default="musicgen-small", help="musicgen-small, musicgen-medium, or musicgen-large")
     parser.add_argument("-l", "--layer_num", type=int, default=-1, help="1-indexed layer num (all if < 0, for jukebox)")
     parser.add_argument("-n", "--normalize", type=strtobool, default=True, help="normalize audio")
     parser.add_argument("-m", "--memmap", type=strtobool, default=True, help="save as memmap, else save as npy")
@@ -210,7 +209,7 @@ if __name__ == '__main__':
     lnum = args.layer_num
     memmap = args.memmap
     normalize = args.normalize
-    model_size = args.model_size
+    model_size = 'jukebox'
     dataset = args.dataset
     debug = args.debug
     pickup = args.pickup
