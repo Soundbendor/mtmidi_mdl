@@ -339,7 +339,7 @@ def get_save_path(save_type, configdict, other=None, make_dir = True):
         subfolder = UC.ZERO_DIST_FOLDER
         use_expr_type_folder = False
         ext = 'csv'
-    elif save_type == 'mean' or save_type == 'std':
+    elif save_type == 'mean' or save_type == 'std' or save_type == 'max' or save_type == 'min':
         subfolder = UC.DATA_STATS_FOLDER
         use_expr_type_folder = False
         ext = 'npy'

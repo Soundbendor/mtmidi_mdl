@@ -27,7 +27,8 @@ def calculate_mean_stdev(generator, train_subset, train_size, emb_dim, shuffle =
     
     _mean = None
     _std = None
-
+    _max = None
+    _min = None
     with torch.no_grad():
         for batch_idx, data in enumerate(train_dl):
             _ipt, ground_truth = data
@@ -38,11 +39,16 @@ def calculate_mean_stdev(generator, train_subset, train_size, emb_dim, shuffle =
                 break
             _mean = _ipt.mean(axis=0)
             _std = _ipt.std(axis=0)
-            if _mean.shape[0] != emb_dim or _std.shape[0] != emb_dim:
+            _max = _ipt.max(axis=0).values
+            _min = _ipt.min(axis=0).values
+
+            if _mean.shape[0] != emb_dim or _std.shape[0] != emb_dim or _max.shape[0] != emb_dim or _min.shape[0] != emb_dim:
                 _mean = None
                 _std = None
+                _max = None
+                _min = None
                 print(f'did not match emb_dim of size {emb_dim}')
-    return _mean, _std
+    return _mean, _std, _max, _min
 
 def calculate_pca_coeffs(generator, train_subset, cur_mean, cur_stdev, num_classes, train_size, configdict):
     successful = True
@@ -637,10 +643,13 @@ if __name__ == "__main__":
             torch_gen = torch.Generator(device=device)
             torch_gen.manual_seed(configdict['seed'])
             train_subset.dataset.set_layer_idx(layer_idx)
-            cur_mean, cur_std = calculate_mean_stdev(torch_gen, train_subset, train_size, configdict['model_dim'] , shuffle = True, device=device)
+            cur_mean, cur_std, cur_max, cur_min = calculate_mean_stdev(torch_gen, train_subset, train_size, configdict['model_dim'] , shuffle = True, device=device)
             print(layer_idx, cur_mean, cur_std)
             UP.save_mean(cur_mean, configdict, layer_idx)
             UP.save_std(cur_std, configdict, layer_idx)
+            UP.save_max(cur_max, configdict, layer_idx)
+            UP.save_min(cur_min, configdict, layer_idx)
+
     elif args.biased_part_rto == True:
         train_subset = subsetdict['preq_all_subset']
         train_size = subsetdict['preq_all_size']

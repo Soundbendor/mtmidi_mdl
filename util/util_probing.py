@@ -167,6 +167,39 @@ def load_model_dict(model, configdict, layer_idx, trial_number, device='cpu'):
     save_path = UMN.get_save_path('model', configdict, other=other_str, make_dir = False)
     model.load_state_dict(torch.load(save_path, map_location=device, weights_only = False))
 
+def save_max(cur_max, configdict, layer_idx):
+    seed = configdict['seed']
+    split_str = f'sd{seed}_train'
+    layer_str = f'l{layer_idx}'
+    other_str = f'{layer_str}_{split_str}-max'
+    save_path = UMN.get_save_path('max', configdict, other=other_str, make_dir = True)
+    np.save(save_path, cur_max.cpu().numpy())
+
+def load_max(configdict, layer_idx):
+    seed = configdict['seed']
+    split_str = f'sd{seed}_train'
+    layer_str = f'l{layer_idx}'
+    other_str = f'{layer_str}_{split_str}-max'
+    save_path = UMN.get_save_path('max', configdict, other=other_str, make_dir = False)
+    return np.load(save_path)
+
+
+def save_min(cur_min, configdict, layer_idx):
+    seed = configdict['seed']
+    split_str = f'sd{seed}_train'
+    layer_str = f'l{layer_idx}'
+    other_str = f'{layer_str}_{split_str}-min'
+    save_path = UMN.get_save_path('min', configdict, other=other_str, make_dir = True)
+    np.save(save_path, cur_min.cpu().numpy())
+
+def load_min(configdict, layer_idx):
+    seed = configdict['seed']
+    split_str = f'sd{seed}_train'
+    layer_str = f'l{layer_idx}'
+    other_str = f'{layer_str}_{split_str}-min'
+    save_path = UMN.get_save_path('min', configdict, other=other_str, make_dir = False)
+    return np.load(save_path)
+
 def save_mean(cur_mean, configdict, layer_idx):
     seed = configdict['seed']
     split_str = f'sd{seed}_train'
