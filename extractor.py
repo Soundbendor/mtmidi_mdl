@@ -397,7 +397,7 @@ if __name__ == '__main__':
     from_share = args.from_share
     fold_num = args.fold_num
     get_stats = args.data_stats
-    mean_pool = args.meanpool
+    meanpool = args.meanpool
     # exit if not a "real" dataset
     logdir = UMN.by_projpath(subpath='log', make_dir = True)
     timestamp = int(time.time() * 1000)
