@@ -136,6 +136,7 @@ def get_musicgen_lm_acts(model, proc, audio, text="", meanpool = True, model_sr 
         dhs = torch.stack(outputs.decoder_hidden_states).mean(axis=2).squeeze()
         #dat = torch.stack(outputs.decoder_attentions).mean(axis=(3,4)).squeeze()
     else:
+        print(torch.stack(outputs.hidden_states).shape)
         dhs = torch.stack(outputs.decoder_hidden_states).squeeze()
         #dat = torch.stack(outputs.decoder_attentions).squeeze()
     return dhs.detach().cpu().numpy()
@@ -169,7 +170,7 @@ def get_mert_w2v2_acts(model, proc, audio, meanpool = True, model_sr = 24000, de
         dhs = torch.stack(outputs.hidden_states).mean(axis=2).squeeze()
         #dat = torch.stack(outputs.decoder_attentions).mean(axis=(3,4)).squeeze()
     else:
-        print(torch.stack(outputs.hidden_states).shape)
+        #print(torch.stack(outputs.hidden_states).shape)
         dhs = torch.stack(outputs.hidden_states).squeeze()
         #dat = torch.stack(outputs.decoder_attentions).squeeze()
     return dhs.detach().cpu().numpy()
@@ -263,10 +264,11 @@ def get_acts(model_size, cur_dataset, meanpool = False, normalize = True, dur = 
     stats_basename = None
     if get_stats == True:
         ffn_dim = UC.FFN_DIM[model_size] 
-        running_max = np.zeros(ffn_dim)
-        running_min = np.zeros(ffn_dim)
-        running_mean = np.zeros(ffn_dim)
-        running_std = np.zeros(ffn_dim)
+        num_layers = UC.MODEL_NUM_LAYERS[model_size]
+        running_max = np.zeros(num_layers,ffn_dim)
+        running_min = np.zeros(num_layersffn_dim)
+        running_mean = np.zeros(num_layers,ffn_dim)
+        running_std = np.zeros(num_layers,ffn_dim)
         mpint = int(meanpool)
         normint = int(normalize)
         stats_basename = f'{model_size}-{cur_dataset}-mp_{mpint}-norm_{normint}'
@@ -328,23 +330,26 @@ def get_acts(model_size, cur_dataset, meanpool = False, normalize = True, dur = 
                 cur_min = None
                 cur_mean = None
                 cur_std = None
-                cur_len = rep_arr.shape[0]
+                cur_len = rep_arr.shape[1]
                 if meanpool == False:
-                    cur_max = rep_arr.max(axis=0).flatten()
-                    cur_min = rep_arr.min(axis=0).flatten()
-                    cur_mean = rep_arr.mean(axis=0).flatten()
-                    cur_std = rep_arr.std(axis=0).flatten()
-                    print(cur_max.shape, cur_min.shape, cur_mean.shape, cur_std.shape, cur_len)
+                    #(num_layers, batch_size, seqlen, dimension)
+                    # bs = 1 -> (num_layers, seqlen, dimension)
+
+                    cur_max = rep_arr.max(axis=1).squeeze()
+                    cur_min = rep_arr.min(axis=1).squeeze()
+                    cur_mean = rep_arr.mean(axis=1).squeeze()
+                    cur_std = rep_arr.std(axis=1).squeeze()
+                    #print(cur_max.shape, cur_min.shape, cur_mean.shape, cur_std.shape, cur_len)
                 else:
                     cur_max = rep_arr
                     cur_min = rep_arr
                     cur_mean = rep_arr
                     cur_std = rep_arr
                 if fidx == 0:
-                    running_max[:] = cur_max
-                    running_min[:] = cur_min
-                    running_mean[:] = cur_mean
-                    running_std[:] = cur_std
+                    running_max[:,:] = cur_max
+                    running_min[:,:] = cur_min
+                    running_mean[:,:] = cur_mean
+                    running_std[:,:] = cur_std
                     seq_len = cur_len
                 else:
                     if cur_len != seq_len:
@@ -354,7 +359,7 @@ def get_acts(model_size, cur_dataset, meanpool = False, normalize = True, dur = 
                     running_max = np.maximum(running_max, cur_max)
                     running_min = np.minimum(running_min, cur_min)
                     running_std = np.maximum(running_std, cur_std)
-                    running_mean = np.mean(np.vstack((running_mean, cur_mean)), axis=0)
+                    running_mean = np.mean(np.concatenate((np.expand_dims(running_mean, axis=1), np.expand_dims(cur_mean, axis=1)), axis=1), axis=1)
         if get_stats == True:
             np.save(os.path.join(STATS_PATH, f'{stats_basename}-max.npy'), running_max)
             np.save(os.path.join(STATS_PATH, f'{stats_basename}-min.npy'), running_min)
