@@ -322,6 +322,7 @@ def get_acts(model_size, cur_dataset, meanpool = False, normalize = True, dur = 
                 else:
                     UMN.save_npy(rep_arr, out_fname, model_size, dataset=cur_dataset, other_projdir = to_dir)
             else:
+                print(rep_arr.shape, meanpool)
                 cur_max = None
                 cur_min = None
                 cur_mean = None
@@ -332,6 +333,7 @@ def get_acts(model_size, cur_dataset, meanpool = False, normalize = True, dur = 
                     cur_min = rep_arr.min(axis=0).flatten()
                     cur_mean = rep_arr.mean(axis=0).flatten()
                     cur_std = rep_arr.std(axis=0).flatten()
+                    print(cur_max.shape, cur_min.shape, cur_mean.shape, cur_std.shape, cur_len)
                 else:
                     cur_max = rep_arr
                     cur_min = rep_arr
