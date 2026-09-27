@@ -170,7 +170,7 @@ def get_mert_w2v2_acts(model, proc, audio, meanpool = True, model_sr = 24000, de
         dhs = torch.stack(outputs.hidden_states).mean(axis=2).squeeze()
         #dat = torch.stack(outputs.decoder_attentions).mean(axis=(3,4)).squeeze()
     else:
-        #print(torch.stack(outputs.hidden_states).shape)
+        print('shape', torch.stack(outputs.hidden_states).shape)
         dhs = torch.stack(outputs.hidden_states).squeeze()
         #dat = torch.stack(outputs.decoder_attentions).squeeze()
     return dhs.detach().cpu().numpy()
@@ -361,11 +361,11 @@ def get_acts(model_size, cur_dataset, meanpool = False, normalize = True, dur = 
                     running_std = np.maximum(running_std, cur_std)
                     running_mean = np.mean(np.concatenate((np.expand_dims(running_mean, axis=1), np.expand_dims(cur_mean, axis=1)), axis=1), axis=1)
         if get_stats == True:
-            np.save(os.path.join(STATS_PATH, f'{stats_basename}-max.npy'), running_max)
-            np.save(os.path.join(STATS_PATH, f'{stats_basename}-min.npy'), running_min)
-            np.save(os.path.join(STATS_PATH, f'{stats_basename}-mean.npy'), running_mean)
-            np.save(os.path.join(STATS_PATH, f'{stats_basename}-std.npy'), running_std)
-            with open(os.path.join(STATS_PATH, f'{stats_basename}-seqlen.txt'), 'w') as sl_file:
+            np.save(os.path.join(STATS_FOLDER, f'{stats_basename}-max.npy'), running_max)
+            np.save(os.path.join(STATS_FOLDER, f'{stats_basename}-min.npy'), running_min)
+            np.save(os.path.join(STATS_FOLDER, f'{stats_basename}-mean.npy'), running_mean)
+            np.save(os.path.join(STATS_FOLDER, f'{stats_basename}-std.npy'), running_std)
+            with open(os.path.join(STATS_FOLDER, f'{stats_basename}-seqlen.txt'), 'w') as sl_file:
                 sl_file.write(str(seq_len))
         fname = fdict['fname']
         print(f'{fname},1', file=recfile_handle)
