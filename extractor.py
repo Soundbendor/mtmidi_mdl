@@ -169,6 +169,7 @@ def get_mert_w2v2_acts(model, proc, audio, meanpool = True, model_sr = 24000, de
         dhs = torch.stack(outputs.hidden_states).mean(axis=2).squeeze()
         #dat = torch.stack(outputs.decoder_attentions).mean(axis=(3,4)).squeeze()
     else:
+        print(torch.stack(outputs.hidden_states).shape)
         dhs = torch.stack(outputs.hidden_states).squeeze()
         #dat = torch.stack(outputs.decoder_attentions).squeeze()
     return dhs.detach().cpu().numpy()
