@@ -136,7 +136,7 @@ def get_musicgen_lm_acts(model, proc, audio, text="", meanpool = True, model_sr 
         dhs = torch.stack(outputs.decoder_hidden_states).mean(axis=2).squeeze()
         #dat = torch.stack(outputs.decoder_attentions).mean(axis=(3,4)).squeeze()
     else:
-        print(torch.stack(outputs.hidden_states).shape)
+        print(torch.stack(outputs.decoder_hidden_states).shape)
         dhs = torch.stack(outputs.decoder_hidden_states).squeeze()
         #dat = torch.stack(outputs.decoder_attentions).squeeze()
     return dhs.detach().cpu().numpy()
