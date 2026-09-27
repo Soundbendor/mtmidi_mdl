@@ -265,10 +265,10 @@ def get_acts(model_size, cur_dataset, meanpool = False, normalize = True, dur = 
     if get_stats == True:
         ffn_dim = UC.FFN_DIM[model_size] 
         num_layers = UC.MODEL_NUM_LAYERS[model_size]
-        running_max = np.zeros(num_layers,ffn_dim)
-        running_min = np.zeros(num_layersffn_dim)
-        running_mean = np.zeros(num_layers,ffn_dim)
-        running_std = np.zeros(num_layers,ffn_dim)
+        running_max = np.zeros((num_layers,ffn_dim))
+        running_min = np.zeros((num_layers,ffn_dim))
+        running_mean = np.zeros((num_layers,ffn_dim))
+        running_std = np.zeros((num_layers,ffn_dim))
         mpint = int(meanpool)
         normint = int(normalize)
         stats_basename = f'{model_size}-{cur_dataset}-mp_{mpint}-norm_{normint}'
