@@ -13,7 +13,7 @@ import numpy as np
 import random
 from distutils.util import strtobool
 
-
+STATS_FOLDER = UMN.by_projpath('emb_stats', make_dir = True)
 # https://huggingface.co/m-a-p/MERT-v1-95M
 # https://huggingface.co/m-a-p/MERT-v1-330M
 # https://huggingface.co/facebook/wav2vec2-large
@@ -113,7 +113,7 @@ def get_musicgen_lm_acts(model, proc, audio, text="", meanpool = True, model_sr 
     procd.to(device)
     outputs = None
     with torch.no_grad():
-        outputs = model(**procd, output_attentions=False, output_hidden_states=True)
+        outputs = model(**procd, output_attentions=False, output_hidden_states=True, use_cache = False)
     dhs = None
     
     #dat = None
@@ -198,7 +198,7 @@ def get_musicgen_encoder_embeddings(model, proc, audio, meanpool = True, model_s
     return out.detach().cpu().numpy()
 
 
-def get_acts(model_size, cur_dataset, normalize = True, dur = UC.WAV_DUR, use_64bit = True, logfile_handle=None, recfile_handle = None, memmap = True, pickup = False, fold_num = -1, from_dir = "", to_dir = ""):
+def get_acts(model_size, cur_dataset, meanpool = False, normalize = True, dur = UC.WAV_DUR, use_64bit = True, logfile_handle=None, recfile_handle = None, memmap = True, pickup = False, get_stats = False, fold_num = -1, from_dir = "", to_dir = ""):
     jukebox_layer_arr = list(range(UC.MODEL_NUM_LAYERS['jukebox']))
     using_hf = cur_dataset in UC.SYNTHEORY_DATASETS
     # musicgen stuff
@@ -208,6 +208,7 @@ def get_acts(model_size, cur_dataset, normalize = True, dur = UC.WAV_DUR, use_64
     model = None
     model_sr = None
     text = ""
+    to_abort = False
     wav_path = os.path.join(UMN.by_projpath('wav'), cur_dataset)
     if len(from_dir) > 0:
         wav_path = os.path.join(from_dir, cur_dataset)
@@ -252,12 +253,30 @@ def get_acts(model_size, cur_dataset, normalize = True, dur = UC.WAV_DUR, use_64
 
     # existing files removing latest (since it may be partially written) and removing extension for each of checking
     existing_name_set = None
+    # for keeping track of running stats if get_stats == True
+    running_max = None
+    running_min = None
+    running_mean = None
+    running_std = None
+    seq_len = None
+    stats_basename = None
+    if get_stats == True:
+        ffn_dim = UC.FFN_DIM[model_size] 
+        running_max = np.zeros(ffn_dim)
+        running_min = np.zeros(ffn_dim)
+        running_mean = np.zeros(ffn_dim)
+        running_std = np.zeros(ffn_dim)
+        mpint = int(meanpool)
+        normint = int(normalize)
+        stats_basename = f'{model_size}-{cur_dataset}-mp_{mpint}-norm_{normint}'
     if pickup == True:
         # pass -1 for fold_num to omit fold_num folder since remove_latest_file takes care of it
         _file_dir = UMN.get_model_acts_path(model_size, dataset=cur_dataset, return_relative = False, make_dir = False, other_projdir = to_dir, fold_num=-1)
         existing_files = UMN.remove_latest_file(_file_dir, is_relative = False, fold_num = fold_num)
         existing_name_set = set([UMN.get_basename(_f, with_ext = False) for _f in existing_files])
     for fidx,fpath in enumerate(cur_pathlist):
+        if to_abort == True:
+            break
         if pickup == True:
             cur_name = UMN.get_basename(fpath, with_ext = False)
             if cur_name in existing_name_set:
@@ -271,16 +290,16 @@ def get_acts(model_size, cur_dataset, normalize = True, dur = UC.WAV_DUR, use_64
         # store by model_size (and fold_num if not using_hf)
         emb_file = None
         rep_arr = None
-        if memmap == True:
+        if memmap == True and get_stats == False:
             emb_file = UMN.get_acts_file(model_size, dataset=cur_dataset, fname=out_fname, use_64bit = use_64bit, write=True, use_shape = None, other_projdir = to_dir, fold_num = fold_num)
         if 'musicgen' in model_size and model_size != 'musicgen-audio':
             print(f'--- extracting musicgen_lm for {fpath} ---', file=logfile_handle)
-            rep_arr =  get_musicgen_lm_acts(model, proc, audio_ipt, text="", meanpool = True, model_sr = model_sr, device=device)
+            rep_arr =  get_musicgen_lm_acts(model, proc, audio_ipt, text="", meanpool = meanpool, model_sr = model_sr, device=device)
         elif 'MERT' in model_size or 'wav2vec' in model_size:
             print(f'--- extracting mert/w2v2 for {fpath} ---', file=logfile_handle)
-            rep_arr =  get_mert_w2v2_acts(model, proc, audio_ipt, meanpool = True, model_sr = model_sr, device=device)
+            rep_arr =  get_mert_w2v2_acts(model, proc, audio_ipt, meanpool = meanpool, model_sr = model_sr, device=device)
         elif 'musicgen-audio' == model_size:
-            rep_arr = get_musicgen_encoder_embeddings(model, proc, audio_ipt, meanpool = True, model_sr = model_sr, device=device)
+            rep_arr = get_musicgen_encoder_embeddings(model, proc, audio_ipt, meanpool = meanpool, model_sr = model_sr, device=device)
         elif 'baseline' in model_size:
             rep_arr = get_baseline_features(audio, sr=sr, feat_type=model_size)
         elif model_size == 'jukebox':
@@ -296,11 +315,50 @@ def get_acts(model_size, cur_dataset, normalize = True, dur = UC.WAV_DUR, use_64
             emb_file.flush()
 
         if model_size != 'jukebox':
-            if memmap == True:
-                emb_file[:,:] = rep_arr
-                emb_file.flush()
+            if get_stats == False:
+                if memmap == True:
+                    emb_file[:,:] = rep_arr
+                    emb_file.flush()
+                else:
+                    UMN.save_npy(rep_arr, out_fname, model_size, dataset=cur_dataset, other_projdir = to_dir)
             else:
-                UMN.save_npy(rep_arr, out_fname, model_size, dataset=cur_dataset, other_projdir = to_dir)
+                cur_max = None
+                cur_min = None
+                cur_mean = None
+                cur_std = None
+                cur_len = rep_arr.shape[0]
+                if meanpool == False:
+                    cur_max = rep_arr.max(axis=0).flatten()
+                    cur_min = rep_arr.min(axis=0).flatten()
+                    cur_mean = rep_arr.mean(axis=0).flatten()
+                    cur_std = rep_arr.std(axis=0).flatten()
+                else:
+                    cur_max = rep_arr
+                    cur_min = rep_arr
+                    cur_mean = rep_arr
+                    cur_std = rep_arr
+                if fidx == 0:
+                    running_max[:] = cur_max
+                    running_min[:] = cur_min
+                    running_mean[:] = cur_mean
+                    running_std[:] = cur_std
+                    seq_len = cur_len
+                else:
+                    if cur_len != seq_len:
+                        print(f'cur_len {cur_len} does not match seq_len {seq_len}', file=recfile_handle)
+                        to_abort = True
+                        break
+                    running_max = np.maximum(running_max, cur_max)
+                    running_min = np.minimum(running_min, cur_min)
+                    running_std = np.maximum(running_std, cur_std)
+                    running_mean = np.mean(np.vstack((running_mean, cur_mean)), axis=0)
+        if get_stats == True:
+            np.save(os.path.join(STATS_PATH, f'{stats_basename}-max.npy'), running_max)
+            np.save(os.path.join(STATS_PATH, f'{stats_basename}-min.npy'), running_min)
+            np.save(os.path.join(STATS_PATH, f'{stats_basename}-mean.npy'), running_mean)
+            np.save(os.path.join(STATS_PATH, f'{stats_basename}-std.npy'), running_std)
+            with open(os.path.join(STATS_PATH, f'{stats_basename}-seqlen.txt'), 'w') as sl_file:
+                sl_file.write(str(seq_len))
         fname = fdict['fname']
         print(f'{fname},1', file=recfile_handle)
 
@@ -314,7 +372,9 @@ if __name__ == '__main__':
     parser.add_argument("-ub", "--use_64bit", type=strtobool, default=False, help="use 64-bit")
     parser.add_argument("-ds", "--dataset", type=str, default="polyrhythms", help="dataset")
     parser.add_argument("-ms", "--model_size", type=str, default="musicgen-small", help="musicgen-small, musicgen-medium, or musicgen-large")
+    parser.add_argument("-mp", "--meanpool", type=strtobool, default=False, help="meanpool over seq len")
     parser.add_argument("-l", "--layer_num", type=int, default=-1, help="1-indexed layer num (all if < 0, for jukebox)")
+    parser.add_argument("-st", "--data_stats", type=strtobool, default=False, help="record stats (don't save)")
     parser.add_argument("-n", "--normalize", type=strtobool, default=True, help="normalize audio")
     parser.add_argument("-m", "--memmap", type=strtobool, default=True, help="save as memmap, else save as npy")
     parser.add_argument("-db", "--debug", type=strtobool, default=False, help="debug mode")
@@ -336,6 +396,8 @@ if __name__ == '__main__':
     to_share = args.to_share
     from_share = args.from_share
     fold_num = args.fold_num
+    get_stats = args.data_stats
+    mean_pool = args.meanpool
     # exit if not a "real" dataset
     logdir = UMN.by_projpath(subpath='log', make_dir = True)
     timestamp = int(time.time() * 1000)
@@ -359,6 +421,6 @@ if __name__ == '__main__':
         lf = open(log_fpath, 'a')
         rf = open(rec_fpath, 'w')
         print(f'=== running extraction for {dataset} with {model_size} at {timestamp} ===', file=lf)
-        get_acts(model_size, dataset, normalize = normalize, dur = UC.WAV_DUR, use_64bit = use_64bit, logfile_handle=lf, recfile_handle=rf, memmap = memmap, pickup = pickup, fold_num = fold_num, from_dir = from_dir, to_dir = to_dir)
+        get_acts(model_size, dataset, meanpool = meanpool, normalize = normalize, dur = UC.WAV_DUR, use_64bit = use_64bit, logfile_handle=lf, recfile_handle=rf, memmap = memmap, pickup = pickup, get_stats = get_stats, fold_num = fold_num, from_dir = from_dir, to_dir = to_dir)
         lf.close()
         rf.close()
