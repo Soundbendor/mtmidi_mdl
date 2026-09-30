@@ -141,7 +141,7 @@ def get_acts_shape(model_size):
 
 
 # use_shape argument overrides shape getting (useful for baselines)
-def get_acts_file(model_size, dataset='polyrhythms', fname='', write = True, use_64bit = True, use_shape = None, other_projdir = '', fold_num = -1):
+def get_acts_file(model_size, dataset='polyrhythms', fname='', write = True, use_64bit = True, use_shape = None, other_projdir = '', meanpool = False, last_token = True, fold_num = -1):
     modelpath = get_model_acts_path(model_size, dataset = dataset, return_relative = False, make_dir = write, other_projdir = other_projdir, fold_num = fold_num)
     fpath = os.path.join(modelpath, fname)
     fp = None

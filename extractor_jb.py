@@ -60,7 +60,9 @@ def get_baseline_features(audio, sr=22050, feat_type="concat"):
     return ft_vec
 
 # 1-indexed
-def get_jukebox_layer_embeddings(fpath=None, audio = None, dur = UC.WAV_DUR, layers=list(range(1,73))):
+
+# NEED TO IMPLEMENT LAST_TOKEN
+def get_jukebox_layer_embeddings(fpath=None, audio = None, dur = UC.WAV_DUR, meanpool = False, last_token = True, layers=list(range(1,73))):
     reps = None
     if fpath != None:
         acts = jml.extract(fpath=fpath, layers=layers, duration=dur, meanpool=True, downsample_target_rate=UC.JUKEBOX_DOWNSAMP_RATE, downsample_method=None)
@@ -82,17 +84,25 @@ def get_print_name(dataset, model_size, is_csv = False, normalize = True, timest
         ret = f'{base_fname}.csv'
     return ret
 
-def path_handler(in_filepath, using_hf=False, model_sr = 44100, dur = UC.WAV_DUR, normalize = True, out_ext = 'dat', logfile_handle=None):
+def path_handler(in_filepath, using_hf=False, model_sr = 44100, dur = UC.WAV_DUR, normalize = True, out_ext = 'dat', meanpool = False, last_token = True, logfile_handle=None):
     out_fname = None
     audio = None
     out_fname = None
     fbasename = None
     fold_num = -1 
+   
+    token_type = None
+    
+    if last_token == True:
+        token_type = UC.LAST_TOKEN_SUFFIX
+    elif meanpool == True:
+        token_type = UC.MEAN_TOKEN_SUFFIX
+
     if using_hf == False:
         print(f'loading {in_filepath}', file=logfile_handle)
         fbasename = UMN.get_basename(in_filepath, with_ext = False)
         fold_num = UMN.get_fold_num_from_filepath(in_filepath)
-        out_fname = f'{fbasename}.{out_ext}'
+        out_fname = f'{fbasename}-{token_type}.{out_ext}'
         # don't need to load audio if jukebox
         audio = UMN.load_wav(in_filepath, dur = dur, normalize = normalize, sr = model_sr)
     else:
@@ -104,7 +114,7 @@ def path_handler(in_filepath, using_hf=False, model_sr = 44100, dur = UC.WAV_DUR
     return {'in_fpath': in_filepath, 'out_fname': out_fname, 'audio': audio, 'fname': fbasename, 'fold_num': fold_num}
 
 
-def get_acts(model_size, cur_dataset, normalize = True, dur = UC.WAV_DUR, use_64bit = True, logfile_handle=None, recfile_handle = None, memmap = True, pickup = False, fold_num = -1, from_dir = "", to_dir = ""):
+def get_acts(model_size, cur_dataset, normalize = True, dur = UC.WAV_DUR, use_64bit = True, logfile_handle=None, recfile_handle = None, memmap = True, pickup = False, fold_num = -1, meanpool = False, last_token = True, from_dir = "", to_dir = ""):
     jukebox_layer_arr = list(range(UC.MODEL_NUM_LAYERS['jukebox']))
     using_hf = cur_dataset in UC.SYNTHEORY_DATASETS
     # musicgen stuff
@@ -151,7 +161,7 @@ def get_acts(model_size, cur_dataset, normalize = True, dur = UC.WAV_DUR, use_64
             cur_name = UMN.get_basename(fpath, with_ext = False)
             if cur_name in existing_name_set:
                 continue
-        fdict = path_handler(fpath, model_sr = model_sr, normalize = normalize, dur = dur,using_hf = using_hf, logfile_handle=logfile_handle, out_ext = out_ext)
+        fdict = path_handler(fpath, model_sr = model_sr, normalize = normalize, dur = dur,using_hf = using_hf, logfile_handle=logfile_handle, meanpool = meanpool, last_token = last_token, out_ext = out_ext)
         #outpath = os.path.join(out_dir, outname)
         out_fname = fdict['out_fname']
         in_fpath = fdict['in_fpath']
@@ -161,7 +171,7 @@ def get_acts(model_size, cur_dataset, normalize = True, dur = UC.WAV_DUR, use_64
         emb_file = None
         rep_arr = None
         if memmap == True:
-            emb_file = UMN.get_acts_file(model_size, dataset=cur_dataset, fname=out_fname, use_64bit = use_64bit, write=True, use_shape = None, other_projdir = to_dir, fold_num = fold_num)
+            emb_file = UMN.get_acts_file(model_size, dataset=cur_dataset, fname=out_fname, use_64bit = use_64bit, write=True, use_shape = None, meanpool = meanpool, last_token = last_tokmen, other_projdir = to_dir, fold_num = fold_num)
         if 'baseline' in model_size:
             rep_arr = get_baseline_features(audio, sr=sr, feat_type=model_size)
         elif model_size == 'jukebox':
@@ -172,7 +182,7 @@ def get_acts(model_size, cur_dataset, normalize = True, dur = UC.WAV_DUR, use_64
             # 1-idx for passing into fn
             j_idx = [l+1 for l in jukebox_layer_arr]
             print(f'extracting layers {j_idx}', file=logfile_handle)
-            rep_arr = get_jukebox_layer_embeddings(fpath=None, audio = audio_ipt, dur = dur, layers=j_idx)
+            rep_arr = get_jukebox_layer_embeddings(fpath=None, audio = audio_ipt, meanpool = meanpool, last_token = last_token, dur = dur, layers=j_idx)
             emb_file[jukebox_layer_arr,:] = rep_arr
             emb_file.flush()
 
@@ -195,6 +205,7 @@ if __name__ == '__main__':
     parser.add_argument("-ub", "--use_64bit", type=strtobool, default=False, help="use 64-bit")
     parser.add_argument("-ds", "--dataset", type=str, default="polyrhythms", help="dataset")
     parser.add_argument("-l", "--layer_num", type=int, default=-1, help="1-indexed layer num (all if < 0, for jukebox)")
+    parser.add_argument("-mp", "--meanpool", type=strtobool, default=False, help="meanpool over seq len (override for AR models)")
     parser.add_argument("-n", "--normalize", type=strtobool, default=True, help="normalize audio")
     parser.add_argument("-m", "--memmap", type=strtobool, default=True, help="save as memmap, else save as npy")
     parser.add_argument("-db", "--debug", type=strtobool, default=False, help="debug mode")
@@ -219,6 +230,12 @@ if __name__ == '__main__':
     # exit if not a "real" dataset
     logdir = UMN.by_projpath(subpath='log', make_dir = True)
     timestamp = int(time.time() * 1000)
+    
+    meanpool = False
+    last_token = True
+    if model_size in UC.MEANPOOL_MODELS or args.meanpool == True:
+        meanpool = True
+        last_token = False
 
     from_dir = ""
     to_dir = ""
@@ -239,6 +256,6 @@ if __name__ == '__main__':
         lf = open(log_fpath, 'a')
         rf = open(rec_fpath, 'w')
         print(f'=== running extraction for {dataset} with {model_size} at {timestamp} ===', file=lf)
-        get_acts(model_size, dataset, normalize = normalize, dur = UC.WAV_DUR, use_64bit = use_64bit, logfile_handle=lf, recfile_handle=rf, memmap = memmap, pickup = pickup, fold_num = fold_num, from_dir = from_dir, to_dir = to_dir)
+        get_acts(model_size, dataset, normalize = normalize, dur = UC.WAV_DUR, use_64bit = use_64bit, logfile_handle=lf, recfile_handle=rf, memmap = memmap, pickup = pickup, fold_num = fold_num, meanpool = meanpool, last_token = last_token, from_dir = from_dir, to_dir = to_dir)
         lf.close()
         rf.close()

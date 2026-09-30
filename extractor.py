@@ -87,17 +87,24 @@ def get_print_name(dataset, model_size, is_csv = False, normalize = True, timest
         ret = f'{base_fname}.csv'
     return ret
 
-def path_handler(in_filepath, using_hf=False, model_sr = 44100, dur = UC.WAV_DUR, normalize = True, out_ext = 'dat', logfile_handle=None):
+def path_handler(in_filepath, using_hf=False, model_sr = 44100, dur = UC.WAV_DUR, normalize = True, out_ext = 'dat', meanpool = False, last_token = True,logfile_handle=None):
     out_fname = None
     audio = None
     out_fname = None
     fbasename = None
     fold_num = -1 
+    token_type = None
+    
+    if last_token == True:
+        token_type = UC.LAST_TOKEN_SUFFIX
+    elif meanpool == True:
+        token_type = UC.MEAN_TOKEN_SUFFIX
+    
     if using_hf == False:
         print(f'loading {in_filepath}', file=logfile_handle)
         fbasename = UMN.get_basename(in_filepath, with_ext = False)
         fold_num = UMN.get_fold_num_from_filepath(in_filepath)
-        out_fname = f'{fbasename}.{out_ext}'
+        out_fname = f'{fbasename}-{token_type}.{out_ext}'
         # don't need to load audio if jukebox
         audio = UMN.load_wav(in_filepath, dur = dur, normalize = normalize, sr = model_sr)
     else:
@@ -290,7 +297,7 @@ def get_acts(model_size, cur_dataset, meanpool = False, last_token = True, norma
             cur_name = UMN.get_basename(fpath, with_ext = False)
             if cur_name in existing_name_set:
                 continue
-        fdict = path_handler(fpath, model_sr = model_sr, normalize = normalize, dur = dur,using_hf = using_hf, logfile_handle=logfile_handle, out_ext = out_ext)
+        fdict = path_handler(fpath, model_sr = model_sr, normalize = normalize, dur = dur,using_hf = using_hf, logfile_handle=logfile_handle, meanpool = meanpool, last_token = last_token, out_ext = out_ext)
         #outpath = os.path.join(out_dir, outname)
         out_fname = fdict['out_fname']
         in_fpath = fdict['in_fpath']
@@ -300,7 +307,7 @@ def get_acts(model_size, cur_dataset, meanpool = False, last_token = True, norma
         emb_file = None
         rep_arr = None
         if memmap == True and get_stats == False:
-            emb_file = UMN.get_acts_file(model_size, dataset=cur_dataset, fname=out_fname, use_64bit = use_64bit, write=True, use_shape = None, other_projdir = to_dir, fold_num = fold_num)
+            emb_file = UMN.get_acts_file(model_size, dataset=cur_dataset, fname=out_fname, use_64bit = use_64bit, write=True, use_shape = None, meanpool = meanpool, last_token = last_token, other_projdir = to_dir, fold_num = fold_num)
         if 'musicgen' in model_size and model_size != 'musicgen-audio':
             print(f'--- extracting musicgen_lm for {fpath} ---', file=logfile_handle)
             rep_arr =  get_musicgen_lm_acts(model, proc, audio_ipt, text="", meanpool = meanpool, model_sr = model_sr, device=device)

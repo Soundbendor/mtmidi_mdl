@@ -8,6 +8,9 @@ JUKEBOX_DOWNSAMP_RATE = 15
 WAV_DUR = 4.0
 LOG2E = np.log2(np.exp(1.))
 
+
+LAST_TOKEN_SUFFIX = 'lasttok'
+MEAN_TOKEN_SUFFIX = 'meantok'
 NUM_FOLDS = 20
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ACTS_FOLDER = 'acts'
