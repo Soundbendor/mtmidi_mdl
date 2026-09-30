@@ -108,7 +108,7 @@ def path_handler(in_filepath, using_hf=False, model_sr = 44100, dur = UC.WAV_DUR
         audio = UHF.get_from_entry_syntheory_audio(in_filepath, mono=True, normalize =normalize, dur = dur, sr=model_sr)
     return {'in_fpath': in_filepath, 'out_fname': out_fname, 'audio': audio, 'fname': fbasename, 'fold_num': fold_num}
 
-def get_musicgen_lm_acts(model, proc, audio, text="", meanpool = True, model_sr = 32000, device = 'cpu'):
+def get_musicgen_lm_acts(model, proc, audio, text="", meanpool = False, last_token = True, model_sr = 32000, device = 'cpu'):
     procd = proc(audio = audio, text = text, sampling_rate = model_sr, padding=True, return_tensors = 'pt')
     procd.to(device)
     outputs = None
@@ -132,7 +132,10 @@ def get_musicgen_lm_acts(model, proc, audio, text="", meanpool = True, model_sr 
     # then squeeze to get rid of the 1 dim (if batch_size == 1)
     # final shape is (num_layers, batch_size, num_heads) (or (num_layers, num_heads) if bs = 1)
 
-    if meanpool == True:
+    if last_token == True: 
+        # since (num_layer, batch_size, seqlen, dim)
+        dhs = torch.stack(outputs.decoder_hidden_states)[:,:,-1,:].squeeze()
+    elif meanpool == True:
         dhs = torch.stack(outputs.decoder_hidden_states).mean(axis=2).squeeze()
         #dat = torch.stack(outputs.decoder_attentions).mean(axis=(3,4)).squeeze()
     else:
@@ -142,7 +145,7 @@ def get_musicgen_lm_acts(model, proc, audio, text="", meanpool = True, model_sr 
     return dhs.detach().cpu().numpy()
 
 
-def get_mert_w2v2_acts(model, proc, audio, meanpool = True, model_sr = 24000, device = 'cpu'):
+def get_mert_w2v2_acts(model, proc, audio, meanpool = False, last_token = True, model_sr = 24000, device = 'cpu'):
     procd = proc(audio, sampling_rate = model_sr, padding=True, return_tensors = 'pt')
     procd.to(device)
     outputs = None
@@ -166,7 +169,10 @@ def get_mert_w2v2_acts(model, proc, audio, meanpool = True, model_sr = 24000, de
     # then squeeze to get rid of the 1 dim (if batch_size == 1)
     # final shape is (num_layers, batch_size, num_heads) (or (num_layers, num_heads) if bs = 1)
 
-    if meanpool == True:
+    if last_token == True: 
+        # since (num_layer, batch_size, seqlen, dim)
+        dhs = torch.stack(outputs.decoder_hidden_states)[:,:,-1,:].squeeze()
+    elif meanpool == True:
         dhs = torch.stack(outputs.hidden_states).mean(axis=2).squeeze()
         #dat = torch.stack(outputs.decoder_attentions).mean(axis=(3,4)).squeeze()
     else:
@@ -200,7 +206,7 @@ def get_musicgen_encoder_embeddings(model, proc, audio, meanpool = True, model_s
     return out.detach().cpu().numpy()
 
 
-def get_acts(model_size, cur_dataset, meanpool = False, normalize = True, dur = UC.WAV_DUR, use_64bit = True, logfile_handle=None, recfile_handle = None, memmap = True, pickup = False, get_stats = False, fold_num = -1, from_dir = "", to_dir = ""):
+def get_acts(model_size, cur_dataset, meanpool = False, last_token = True, normalize = True, dur = UC.WAV_DUR, use_64bit = True, logfile_handle=None, recfile_handle = None, memmap = True, pickup = False, get_stats = False, fold_num = -1, from_dir = "", to_dir = ""):
     jukebox_layer_arr = list(range(UC.MODEL_NUM_LAYERS['jukebox']))
     using_hf = cur_dataset in UC.SYNTHEORY_DATASETS
     # musicgen stuff
@@ -380,8 +386,8 @@ if __name__ == '__main__':
     parser.add_argument("-ub", "--use_64bit", type=strtobool, default=False, help="use 64-bit")
     parser.add_argument("-ds", "--dataset", type=str, default="polyrhythms", help="dataset")
     parser.add_argument("-ms", "--model_size", type=str, default="musicgen-small", help="musicgen-small, musicgen-medium, or musicgen-large")
-    parser.add_argument("-mp", "--meanpool", type=strtobool, default=False, help="meanpool over seq len")
     parser.add_argument("-l", "--layer_num", type=int, default=-1, help="1-indexed layer num (all if < 0, for jukebox)")
+    parser.add_argument("-mp", "--meanpool", type=strtobool, default=False, help="meanpool over seq len (override for AR models)")
     parser.add_argument("-st", "--data_stats", type=strtobool, default=False, help="record stats (don't save)")
     parser.add_argument("-n", "--normalize", type=strtobool, default=True, help="normalize audio")
     parser.add_argument("-m", "--memmap", type=strtobool, default=True, help="save as memmap, else save as npy")
@@ -405,7 +411,11 @@ if __name__ == '__main__':
     from_share = args.from_share
     fold_num = args.fold_num
     get_stats = args.data_stats
-    meanpool = args.meanpool
+    meanpool = False
+    last_token = True
+    if model_size in UC.MEANPOOL_MODELS or args.meanpool == True:
+        meanpool = True
+        last_token = False
     # exit if not a "real" dataset
     logdir = UMN.by_projpath(subpath='log', make_dir = True)
     timestamp = int(time.time() * 1000)
@@ -429,6 +439,6 @@ if __name__ == '__main__':
         lf = open(log_fpath, 'a')
         rf = open(rec_fpath, 'w')
         print(f'=== running extraction for {dataset} with {model_size} at {timestamp} ===', file=lf)
-        get_acts(model_size, dataset, meanpool = meanpool, normalize = normalize, dur = UC.WAV_DUR, use_64bit = use_64bit, logfile_handle=lf, recfile_handle=rf, memmap = memmap, pickup = pickup, get_stats = get_stats, fold_num = fold_num, from_dir = from_dir, to_dir = to_dir)
+        get_acts(model_size, dataset, meanpool = meanpool, last_token = last_token, normalize = normalize, dur = UC.WAV_DUR, use_64bit = use_64bit, logfile_handle=lf, recfile_handle=rf, memmap = memmap, pickup = pickup, get_stats = get_stats, fold_num = fold_num, from_dir = from_dir, to_dir = to_dir)
         lf.close()
         rf.close()
