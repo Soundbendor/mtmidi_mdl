@@ -166,10 +166,10 @@ def load_data_dict(dataset):
             }
     return ret
 
-def get_memmap_at_idx(fname_base, fold_num, model_size, dataset, layer_idx, use_64bit=False, to_torch = True, other_projdir = '', device='cpu'):
+def get_memmap_at_idx(fname_base, fold_num, model_size, dataset, layer_idx, seqlen = -1, use_64bit=False, to_torch = True, other_projdir = '', device='cpu'):
     fname = f'{fname_base}.dat'
-    emb_file = UMN.get_acts_file(model_size, dataset=dataset, fname=fname, write = False, use_64bit = use_64bit, use_shape = None, other_projdir = other_projdir, fold_num = fold_num)
-    cur = emb_file[layer_idx,:].copy()
+    emb_file = UMN.get_acts_file(model_size, dataset=dataset, fname=fname, write = False, use_64bit = use_64bit, use_shape = None, seqlen = seqlen, other_projdir = other_projdir, fold_num = fold_num)
+    cur = emb_file[layer_idx].copy()
     if to_torch == True:
         cur = torch.from_numpy(cur).to(device)
     return cur

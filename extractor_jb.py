@@ -15,63 +15,29 @@ import torch
 import random
 from distutils.util import strtobool
 
-### porting old code from mtmidi
-def get_baseline_features(audio, sr=22050, feat_type="concat"):
-    feat = []
-    if feat_type == "baseline-mel" or feat_type == "baseline-concat":
-        # mel spectrogram
-        # https://librosa.org/doc/latest/generated/librosa.feature.melspectrogram.html
-        cur_mel = lrf.melspectrogram(y=audio, sr=sr, n_fft=2048, hop_length = 512)
-        # returns (N=1, n_mels, t)
-        feat.append(cur_mel)
-    if feat_type == "baseline-chroma" or feat_type == "baseline-concat":
-        # constant q chromagram
-        # https://librosa.org/doc/0.10.2/generated/librosa.feature.chroma_cqt.html#librosa.feature.chroma_cqt
-        # default fmin = 32.7
-        # default norm = infinity norm normalization
-        # default 36 bins per octave
-        cur_chroma = lrf.chroma_cqt(y=audio, sr=sr, hop_length=512)
-        # returns (N=1, n_chroma, t)
-        feat.append(cur_chroma)
-    if feat_type == "baseline-mfcc" or feat_type == "baseline-concat":
-        # mfcc
-        # https://librosa.org/doc/0.10.2/generated/librosa.feature.mfcc.html#librosa.feature.mfcc
-        # default 20 mfccs
-        # default orthonormal dct basis
-        cur_mfcc = lrf.mfcc(y=audio, sr = sr, n_mfcc = 20)
-        # returns (N=1, n_mfcc, t)
-        feat.append(cur_mfcc)
-    ft_vec = None
-    for ft_idx,ft in enumerate(feat):
-        # as in the original codebase, do 0,1,2-order diff across time dimension
-        # and then take mean and std dev across time dimension
-        # note that 0 order diff is just the same array
-        for diff_n in range(3):
-            cur_diff = np.diff(ft, n=diff_n, axis=1)
-            cur_mean = np.mean(cur_diff, axis=1)
-            cur_std = np.std(cur_diff, axis=1)
-            cur = np.concatenate((cur_mean, cur_std))
-            if diff_n == 0 and ft_idx == 0:
-                ft_vec = copy.deepcopy(cur)
-            else:
-                ft_vec = np.concatenate([ft_vec, copy.deepcopy(cur)])
-    # make it a 1 x cur_dim vector for consistency (i think)
-    if len(ft_vec.shape) < 2:
-        ft_vec = np.expand_dims(ft_vec,axis=0)
-    return ft_vec
 
 # 1-indexed
 
 # NEED TO IMPLEMENT LAST_TOKEN
+# assume it's seqlen, dim but fix later
 def get_jukebox_layer_embeddings(fpath=None, audio = None, dur = UC.WAV_DUR, meanpool = False, last_token = True, layers=list(range(1,73))):
     reps = None
+    cur_args = {'layers': layers, 'duration': dur, 'meanpool': True, 'downsample_target_rate': UC.JUKEBOX_DOWNSAMP_RATE, 'downsample_method': None}
     if fpath != None:
-        acts = jml.extract(fpath=fpath, layers=layers, duration=dur, meanpool=True, downsample_target_rate=UC.JUKEBOX_DOWNSAMP_RATE, downsample_method=None)
+        cur_args['fpath'] = fpath
     else:
-        acts = jml.extract(audio=audio, layers=layers, duration=dur, meanpool=True, downsample_target_rate=UC.JUKEBOX_DOWNSAMP_RATE, downsample_method=None)
+        cur_args['audio'] = audio
+    if fpath != None:
+        acts = jml.extract(**cur_args)
+    else:
+        acts = jml.extract(**cur_args)
     jml.lib.empty_cache()
-    return np.array([acts[i] for i in layers])
-
+    ret = None
+    if meanpool == True or last_token == False:
+        ret = np.array([acts[i] for i in layers])
+    if last_token == True:
+        ret = np.array([acts[i][-1] for i in layers])
+    return ret
 
 def get_acts(model_size, cur_dataset, normalize = True, dur = UC.WAV_DUR, use_64bit = True, logfile_handle=None, recfile_handle = None, memmap = True, pickup = False, fold_num = -1, meanpool = False, last_token = True, from_dir = "", to_dir = ""):
     jukebox_layer_arr = list(range(UC.MODEL_NUM_LAYERS['jukebox']))
@@ -127,30 +93,31 @@ def get_acts(model_size, cur_dataset, normalize = True, dur = UC.WAV_DUR, use_64
         audio_ipt = fdict['audio']
         fold_num = fdict['fold_num']
         # store by model_size (and fold_num if not using_hf)
-        emb_file = None
         rep_arr = None
         if memmap == True:
-            emb_file = UMN.get_acts_file(model_size, dataset=cur_dataset, fname=out_fname, use_64bit = use_64bit, write=True, use_shape = None, meanpool = meanpool, last_token = last_tokmen, other_projdir = to_dir, fold_num = fold_num)
-        if 'baseline' in model_size:
-            rep_arr = get_baseline_features(audio, sr=sr, feat_type=model_size)
-        elif model_size == 'jukebox':
-            print(f'--- extracting jukebox for {fpath} ---', file=logfile_handle)
-            # note that layers are 1-indexed in jukebox
-            # so let's 0-idx and then add 1 when feeding into jukebox fn
+        print(f'--- extracting jukebox for {fpath} ---', file=logfile_handle)
+        # note that layers are 1-indexed in jukebox
+        # so let's 0-idx and then add 1 when feeding into jukebox fn
 
-            # 1-idx for passing into fn
-            j_idx = [l+1 for l in jukebox_layer_arr]
-            print(f'extracting layers {j_idx}', file=logfile_handle)
-            rep_arr = get_jukebox_layer_embeddings(fpath=None, audio = audio_ipt, meanpool = meanpool, last_token = last_token, dur = dur, layers=j_idx)
-            emb_file[jukebox_layer_arr,:] = rep_arr
+        # 1-idx for passing into fn
+        j_idx = [l+1 for l in jukebox_layer_arr]
+        print(f'extracting layers {j_idx}', file=logfile_handle)
+        rep_arr = get_jukebox_layer_embeddings(fpath=None, audio = audio_ipt, meanpool = meanpool, last_token = last_token, dur = dur, layers=j_idx) 
+        if memmap == True:
+            cur_seqlen = -1
+            if meanpool == False and last_token == False:
+                cur_seqlen = rep_arr[0].shape[0]
+                seqlen_fname = f'{out_fname}-seqlen.txt'
+                #seqlen_folder = os.path.join(UC.SEQLEN_FOLDER, seqlen_fname)
+                seqlen_folder = UMN.by_projpath2([UC.SEQLEN_FOLDER, model_size, cur_dataset], make_dir = True)
+                with open(os.path.join(seqlen_folder,seqlen_fname), 'w') as sl_file:
+                    sl_file.write(str(cur_seqlen))
+
+            emb_file = UMN.get_acts_file(model_size, dataset=cur_dataset, fname=out_fname, use_64bit = use_64bit, write=True, use_shape = None, seqlen = cur_seqlen, meanpool = meanpool, last_token = last_token, other_projdir = to_dir, fold_num = fold_num)
+            emb_file[jukebox_layer_arr] = rep_arr
             emb_file.flush()
-
-        if model_size != 'jukebox':
-            if memmap == True:
-                emb_file[:,:] = rep_arr
-                emb_file.flush()
-            else:
-                UMN.save_npy(rep_arr, out_fname, model_size, dataset=cur_dataset, other_projdir = to_dir)
+        else:
+            UMN.save_npy(rep_arr, out_fname, model_size, dataset=cur_dataset, other_projdir = to_dir)
         fname = fdict['fname']
         print(f'{fname},1', file=recfile_handle)
 
@@ -164,8 +131,8 @@ if __name__ == '__main__':
     parser.add_argument("-ub", "--use_64bit", type=strtobool, default=False, help="use 64-bit")
     parser.add_argument("-ds", "--dataset", type=str, default="polyrhythms", help="dataset")
     parser.add_argument("-l", "--layer_num", type=int, default=-1, help="1-indexed layer num (all if < 0, for jukebox)")
-    parser.add_argument("-mp", "--meanpool", type=strtobool, default=False, help="meanpool over seq len (override for AR models)")
-    parser.add_argument("-fs", "--full_seq", type=strtobool, default=True, help="save full seq (override for both AR and Masked)")
+    parser.add_argument("-mpl", "--meanpool", type=strtobool, default=False, help="meanpool over seq len (override for AR models)")
+    parser.add_argument("-fsq", "--full_seq", type=strtobool, default=True, help="save full seq (override for both AR and Masked)")
     parser.add_argument("-n", "--normalize", type=strtobool, default=True, help="normalize audio")
     parser.add_argument("-m", "--memmap", type=strtobool, default=True, help="save as memmap, else save as npy")
     parser.add_argument("-db", "--debug", type=strtobool, default=False, help="debug mode")

@@ -14,6 +14,7 @@ import numpy as np
 import random
 from distutils.util import strtobool
 
+UMN.by_projpath(UC.SEQLEN_FOLDER, make_dir = True)
 STATS_FOLDER = UMN.by_projpath('emb_stats', make_dir = True)
 # https://huggingface.co/m-a-p/MERT-v1-95M
 # https://huggingface.co/m-a-p/MERT-v1-330M
@@ -265,10 +266,8 @@ def get_acts(model_size, cur_dataset, meanpool = False, last_token = True, norma
         audio_ipt = fdict['audio']
         fold_num = fdict['fold_num']
         # store by model_size (and fold_num if not using_hf)
-        emb_file = None
         rep_arr = None
         if memmap == True and get_stats == False:
-            emb_file = UMN.get_acts_file(model_size, dataset=cur_dataset, fname=out_fname, use_64bit = use_64bit, write=True, use_shape = None, meanpool = meanpool, last_token = last_token, other_projdir = to_dir, fold_num = fold_num)
         if 'musicgen' in model_size and model_size != 'musicgen-audio':
             print(f'--- extracting musicgen_lm for {fpath} ---', file=logfile_handle)
             rep_arr =  get_musicgen_lm_acts(model, proc, audio_ipt, text="", meanpool = meanpool, model_sr = model_sr, device=device)
@@ -294,7 +293,17 @@ def get_acts(model_size, cur_dataset, meanpool = False, last_token = True, norma
         if model_size != 'jukebox':
             if get_stats == False:
                 if memmap == True:
-                    emb_file[:,:] = rep_arr
+                    cur_seqlen = -1
+                    if meanpool == False and last_token == False:
+                        cur_seqlen = rep_arr[0].shape[0]
+                        seqlen_fname = f'{out_fname}-seqlen.txt'
+                        #seqlen_folder = os.path.join(UC.SEQLEN_FOLDER, seqlen_fname)
+                        seqlen_folder = UMN.by_projpath2([UC.SEQLEN_FOLDER, model_size, cur_dataset], make_dir = True)
+                        with open(os.path.join(seqlen_folder,seqlen_fname), 'w') as sl_file:
+                            sl_file.write(str(cur_seqlen))
+                    emb_file = UMN.get_acts_file(model_size, dataset=cur_dataset, fname=out_fname, use_64bit = use_64bit, write=True, use_shape = None, seqlen = cur_seqlen, meanpool = meanpool, last_token = last_token, other_projdir = to_dir, fold_num = fold_num)
+
+                    emb_file[:] = rep_arr
                     emb_file.flush()
                 else:
                     UMN.save_npy(rep_arr, out_fname, model_size, dataset=cur_dataset, other_projdir = to_dir)

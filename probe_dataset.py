@@ -1,9 +1,10 @@
 import torch, torch.utils.data as TUD
 
 import util.util_data as UD
+import util.util_main as UMN
 
 class ProbeDataset(TUD.Dataset):
-    def __init__(self, datadict, model_size, layer_idx=0, from_dir = '', to_torch = True, emit_name = False, device ='cpu'):
+    def __init__(self, datadict, model_size, layer_idx=0, from_dir = '', to_torch = True, meanpool = False, last_token = True, emit_name = False, device ='cpu'):
         self.df = datadict['df']
         self.dataset = datadict['dataset']
         self.classdict = datadict['classdict']
@@ -15,6 +16,8 @@ class ProbeDataset(TUD.Dataset):
         self.to_torch = to_torch
         self.is_64bit = False
         self.emit_name = emit_name
+        self.meanpool = meanpool
+        self.last_token = last_token
 
     def __len__(self):
         return self.df['name'].count()
@@ -30,7 +33,8 @@ class ProbeDataset(TUD.Dataset):
         cur_name = cur_row['name']
         cur_fold = cur_row['fold']
         cur_truth = self.classdict[cur_row[self.label]]
-        cur_arr = UD.get_memmap_at_idx(f'{cur_name}', cur_fold, self.model_size, self.dataset, self.layer_idx, use_64bit=self.is_64bit, to_torch = self.to_torch, other_projdir = self.from_dir, device=self.device)
+        get_name = UMN.add_fname_suffix(cur_name, meanpool = self.mean_pool, last_token = self.last_token, out_ext='')
+        cur_arr = UD.get_memmap_at_idx(get_name, cur_fold, self.model_size, self.dataset, self.layer_idx, use_64bit=self.is_64bit, to_torch = self.to_torch, other_projdir = self.from_dir, device=self.device)
         if self.emit_name == False:
             return cur_arr, cur_truth
         else:

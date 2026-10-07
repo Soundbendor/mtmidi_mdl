@@ -10,6 +10,7 @@ import util.util_wandb as UW
 import util.util_optuna as UO
 import util.util_probing as UP
 import util.util_rdb as UR
+import util.util_extractor as UEX
 
 from models.mlpprobe import MLPProbe
 from probe_dataset import ProbeDataset
@@ -599,6 +600,8 @@ if __name__ == "__main__":
     parser.add_argument("-pcl", "--per_class", type=strtobool, default=False, help="calculate per class")
     parser.add_argument("-pca", "--calc_pca", type=strtobool, default=False, help="calculate PCA")
     parser.add_argument("-ms", "--model_size", type=str, default="musicgen-small", help="musicgen-small/musicgen-medium/musicgen-large/jukebox/MERT-v1-95M/MERT-v1-330M/wav2vec2-base/wav2vec2-large")
+    parser.add_argument("-mpl", "--meanpool", type=strtobool, default=False, help="embeddings meanpooled over seq len (override for AR models)")
+    parser.add_argument("-fsq", "--full_seq", type=strtobool, default=True, help="use full seq embeddings (override for both AR and Masked)")
     parser.add_argument("-et", "--expr_type", type=str, default="mlp", help="experiment type")
     parser.add_argument("-zd", "--zero_dist", type=strtobool, default=False, help="find zero dist embeddings")
     parser.add_argument("-dbg", "--debug", type=strtobool, default=False, help="debug")
@@ -628,7 +631,8 @@ if __name__ == "__main__":
         from_dir = os.path.join(UC.SHARE_PATH, 'mtmidi_mdl')
     datadict = UD.load_data_dict(args.dataset)
 
-    cur_ds = ProbeDataset(datadict, args.model_size, layer_idx=0, from_dir = from_dir, to_torch = True, device = device)
+    meanpool, last_token =  UEX.parse_seqtype_overrides(model_size, meanpool_override = args.meanpool, full_seq_override = args.full_seq)
+    cur_ds = ProbeDataset(datadict, args.model_size, layer_idx=0, from_dir = from_dir, meanpool = meanpool, last_token = last_token, to_torch = True, device = device)
 
     configdict = UP.build_config(args, datadict)
     subsetdict = UP.get_preq_valid_test_subsets(cur_ds, datadict, configdict)

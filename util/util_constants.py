@@ -11,11 +11,12 @@ LOG2E = np.log2(np.exp(1.))
 
 LAST_TOKEN_SUFFIX = 'lasttok'
 MEAN_TOKEN_SUFFIX = 'meantok'
-ALL_TOKEN_SUFFIX = 'alltok'
+FULLSEQ_TOKEN_SUFFIX = 'fullseq'
 NUM_FOLDS = 20
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ACTS_FOLDER = 'acts'
 SAMPLER_FOLDER = 'samplers'
+SEQLEN_FOLDER = 'seqlen'
 CM_FOLDER = 'cm'
 CM_NONSTANDARD_FOLDER = 'cm-nstd'
 RESULTS_FOLDER = 'res'
