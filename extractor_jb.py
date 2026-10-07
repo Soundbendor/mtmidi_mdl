@@ -5,6 +5,7 @@ import jukemirlib as jml
 import util.util_main as UMN
 import util.util_constants as UC
 import util.util_hf as UHF
+import util.util_extractor as UEX
 from dataclasses import dataclass
 import librosa as lr
 from librosa import feature as lrf
@@ -72,48 +73,6 @@ def get_jukebox_layer_embeddings(fpath=None, audio = None, dur = UC.WAV_DUR, mea
     return np.array([acts[i] for i in layers])
 
 
-
-def get_print_name(dataset, model_size, is_csv = False, normalize = True, timestamp = 0):
-    base_fname = f'{dataset}_musicgen-{model_size}-{timestamp}'
-    if normalize == True:
-        base_fname = f'{dataset}_musicgen-{model_size}_norm-{timestamp}'
-    ret = None
-    if is_csv == False:
-        ret = f'{base_fname}.log'
-    else:
-        ret = f'{base_fname}.csv'
-    return ret
-
-def path_handler(in_filepath, using_hf=False, model_sr = 44100, dur = UC.WAV_DUR, normalize = True, out_ext = 'dat', meanpool = False, last_token = True, logfile_handle=None):
-    out_fname = None
-    audio = None
-    out_fname = None
-    fbasename = None
-    fold_num = -1 
-   
-    token_type = None
-    
-    if last_token == True:
-        token_type = UC.LAST_TOKEN_SUFFIX
-    elif meanpool == True:
-        token_type = UC.MEAN_TOKEN_SUFFIX
-
-    if using_hf == False:
-        print(f'loading {in_filepath}', file=logfile_handle)
-        fbasename = UMN.get_basename(in_filepath, with_ext = False)
-        fold_num = UMN.get_fold_num_from_filepath(in_filepath)
-        out_fname = f'{fbasename}-{token_type}.{out_ext}'
-        # don't need to load audio if jukebox
-        audio = UMN.load_wav(in_filepath, dur = dur, normalize = normalize, sr = model_sr)
-    else:
-        hf_path = UHF.get_from_entry_path(in_filepath) 
-        print(f"loading {hf_path}", file=lf)
-        out_fname = UMN.ext_replace(hf_path, new_ext=out_ext)
-        fbasename = UMN.ext_replace(hf_path, new_ext='')
-        audio = UHF.get_from_entry_syntheory_audio(in_filepath, mono=True, normalize =normalize, dur = dur, sr=model_sr)
-    return {'in_fpath': in_filepath, 'out_fname': out_fname, 'audio': audio, 'fname': fbasename, 'fold_num': fold_num}
-
-
 def get_acts(model_size, cur_dataset, normalize = True, dur = UC.WAV_DUR, use_64bit = True, logfile_handle=None, recfile_handle = None, memmap = True, pickup = False, fold_num = -1, meanpool = False, last_token = True, from_dir = "", to_dir = ""):
     jukebox_layer_arr = list(range(UC.MODEL_NUM_LAYERS['jukebox']))
     using_hf = cur_dataset in UC.SYNTHEORY_DATASETS
@@ -161,7 +120,7 @@ def get_acts(model_size, cur_dataset, normalize = True, dur = UC.WAV_DUR, use_64
             cur_name = UMN.get_basename(fpath, with_ext = False)
             if cur_name in existing_name_set:
                 continue
-        fdict = path_handler(fpath, model_sr = model_sr, normalize = normalize, dur = dur,using_hf = using_hf, logfile_handle=logfile_handle, meanpool = meanpool, last_token = last_token, out_ext = out_ext)
+        fdict = UEX.path_handler(fpath, model_sr = model_sr, normalize = normalize, dur = dur,using_hf = using_hf, logfile_handle=logfile_handle, meanpool = meanpool, last_token = last_token, out_ext = out_ext)
         #outpath = os.path.join(out_dir, outname)
         out_fname = fdict['out_fname']
         in_fpath = fdict['in_fpath']
@@ -206,6 +165,7 @@ if __name__ == '__main__':
     parser.add_argument("-ds", "--dataset", type=str, default="polyrhythms", help="dataset")
     parser.add_argument("-l", "--layer_num", type=int, default=-1, help="1-indexed layer num (all if < 0, for jukebox)")
     parser.add_argument("-mp", "--meanpool", type=strtobool, default=False, help="meanpool over seq len (override for AR models)")
+    parser.add_argument("-fs", "--full_seq", type=strtobool, default=True, help="save full seq (override for both AR and Masked)")
     parser.add_argument("-n", "--normalize", type=strtobool, default=True, help="normalize audio")
     parser.add_argument("-m", "--memmap", type=strtobool, default=True, help="save as memmap, else save as npy")
     parser.add_argument("-db", "--debug", type=strtobool, default=False, help="debug mode")
@@ -231,11 +191,7 @@ if __name__ == '__main__':
     logdir = UMN.by_projpath(subpath='log', make_dir = True)
     timestamp = int(time.time() * 1000)
     
-    meanpool = False
-    last_token = True
-    if model_size in UC.MEANPOOL_MODELS or args.meanpool == True:
-        meanpool = True
-        last_token = False
+    meanpool, last_token =  UEX.parse_seqtype_overrides(model_size, meanpool_override = args.meanpool, full_seq_override = args.full_seq)
 
     from_dir = ""
     to_dir = ""
@@ -244,8 +200,8 @@ if __name__ == '__main__':
     if args.to_share == True:
         to_dir = os.path.join(UC.SHARE_PATH, 'mtmidi_mdl')
     # miscellaneous logs
-    log_fname = get_print_name(dataset, model_size, is_csv = False, normalize = normalize, timestamp = timestamp)
-    rec_fname = get_print_name(dataset, model_size, is_csv = True, normalize = normalize, timestamp = timestamp)
+    log_fname = UEX.get_print_name(dataset, model_size, is_csv = False, normalize = normalize, timestamp = timestamp)
+    rec_fname = UEX.get_print_name(dataset, model_size, is_csv = True, normalize = normalize, timestamp = timestamp)
     log_fpath = os.path.join(logdir, log_fname)
     rec_fpath = os.path.join(logdir, rec_fname)
     if debug == True:

@@ -361,3 +361,17 @@ def get_save_path(save_type, configdict, other=None, make_dir = True):
     return os.path.join(cur_path, fname)
 
 
+def add_fname_suffix(fname, meanpool = False, last_token = False, out_ext=''):
+    token_type = None
+     if last_token == True and meanpool == False:
+        token_type = UC.LAST_TOKEN_SUFFIX
+    elif meanpool == True and last_token == False:
+        token_type = UC.MEAN_TOKEN_SUFFIX
+    else:
+        token_type = UC.ALL_TOKEN_SUFFIX
+    ret = f'{fname}-{token_type}'
+    if len(out_ext) > 0:
+        ret = f'{fname}-{token_type}.{out_ext}'
+    return ret
+    
+
