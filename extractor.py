@@ -366,7 +366,7 @@ if __name__ == '__main__':
     parser.add_argument("-ms", "--model_size", type=str, default="musicgen-small", help="musicgen-small, musicgen-medium, or musicgen-large")
     parser.add_argument("-l", "--layer_num", type=int, default=-1, help="1-indexed layer num (all if < 0, for jukebox)")
     parser.add_argument("-mpl", "--meanpool", type=strtobool, default=False, help="meanpool over seq len (override for AR models)")
-    parser.add_argument("-fs", "--full_seq", type=strtobool, default=True, help="save full seq (override for both AR and Masked)")
+    parser.add_argument("-fsq", "--full_seq", type=strtobool, default=True, help="save full seq (override for both AR and Masked)")
     parser.add_argument("-st", "--data_stats", type=strtobool, default=False, help="record stats (don't save)")
     parser.add_argument("-n", "--normalize", type=strtobool, default=True, help="normalize audio")
     parser.add_argument("-mm", "--memmap", type=strtobool, default=True, help="save as memmap, else save as npy")
