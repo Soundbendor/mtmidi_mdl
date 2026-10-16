@@ -259,7 +259,7 @@ def get_acts(model_size, cur_dataset, meanpool = False, last_token = True, norma
             cur_name = UMN.get_basename(fpath, with_ext = False)
             if cur_name in existing_name_set:
                 continue
-        fdict = path_handler(fpath, model_sr = model_sr, normalize = normalize, dur = dur,using_hf = using_hf, logfile_handle=logfile_handle, meanpool = meanpool, last_token = last_token, out_ext = out_ext)
+        fdict = UEX.path_handler(fpath, model_sr = model_sr, normalize = normalize, dur = dur,using_hf = using_hf, logfile_handle=logfile_handle, meanpool = meanpool, last_token = last_token, out_ext = out_ext)
         #outpath = os.path.join(out_dir, outname)
         out_fname = fdict['out_fname']
         in_fpath = fdict['in_fpath']
