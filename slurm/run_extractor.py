@@ -26,10 +26,10 @@ if __name__ == "__main__":
     parser.add_argument("-l", "--layer_num", type=int, default=-1, help="1-indexed layer num (all if < 0, for jukebox)")
     parser.add_argument("-fsh", "--from_share", type=strtobool, default=True, help="load from share partition")
     parser.add_argument("-tsh", "--to_share", type=strtobool, default=True, help="save to share partition")
-    parser.add_argument("-m", "--memmap", type=strtobool, default=True, help="save as memmap, else save as npy")
+    parser.add_argument("-mm", "--memmap", type=strtobool, default=True, help="save as memmap, else save as npy")
     parser.add_argument("-ub", "--use_64bit", type=strtobool, default=False, help="use 64 bit")
     parser.add_argument("-db", "--debug", type=strtobool, default=False, help="debug mode")
-    parser.add_argument("-p", "--pickup", type=strtobool, default=False, help="pickup where script left off")
+    parser.add_argument("-pu", "--pickup", type=strtobool, default=False, help="pickup where script left off")
     parser.add_argument("-fn", "--fold_num", type=int, default=0, help="fold number to extract (-1 for no folds, 0 for all folds, else specific fold)")
     parser.add_argument("-ram", "--ram_mem", type=int, default=40, help="ram in gigs")
     parser.add_argument("-gpu", "--gpus", type=int, default=1, help="num of gpus to use")
@@ -71,7 +71,7 @@ if __name__ == "__main__":
                 slurm_strarr2.append(f"#SBATCH -w {args.node}")
             slurm_strarr3 = [f"#SBATCH --mem={args.ram_mem}G", f"#SBATCH --gres=gpu:{args.gpus}", f"#SBATCH -t {args.num_days}-00:00:00", f"#SBATCH --job-name={job_str}", "#SBATCH --export=ALL", f"#SBATCH --output=/nfs/guille/eecs_research/soundbendor/kwand/out_mtmidi_prb/{job_str}-%j.out", ""]
             slurm_strarr = slurm_strarr1 + slurm_strarr2 + slurm_strarr3
-            p_str = f"python {py_path} -ds {dataset} -ms {model_size} -fsh {args.from_share} -tsh {args.to_share} -ub {args.use_64bit} -n {cur_normalize} -l {args.layer_num} -m {args.memmap} -db {args.debug} -p {args.pickup} -fn {args.fold_num} -mpl {args.meanpool} -fsq {args.full_seq} -st {args.data_stats}" 
+            p_str = f"python {py_path} -ds {dataset} -ms {model_size} -fsh {args.from_share} -tsh {args.to_share} -ub {args.use_64bit} -n {cur_normalize} -l {args.layer_num} -mm {args.memmap} -db {args.debug} -pu {args.pickup} -fn {args.fold_num} -mpl {args.meanpool} -fsq {args.full_seq} -st {args.data_stats}" 
             slurm_strarr.append(p_str)
             script_fname = f"{start_time}_{job_str}.sh"
             script_idx += 1
