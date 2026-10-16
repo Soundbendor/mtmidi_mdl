@@ -268,6 +268,7 @@ def get_acts(model_size, cur_dataset, meanpool = False, last_token = True, norma
         # store by model_size (and fold_num if not using_hf)
         rep_arr = None
         if memmap == True and get_stats == False:
+            emb_file = UMN.get_acts_file(model_size, dataset=cur_dataset, fname=out_fname, use_64bit = use_64bit, write=True, use_shape = None, meanpool = meanpool, last_token = last_token, other_projdir = to_dir, fold_num = fold_num)
         if 'musicgen' in model_size and model_size != 'musicgen-audio':
             print(f'--- extracting musicgen_lm for {fpath} ---', file=logfile_handle)
             rep_arr =  get_musicgen_lm_acts(model, proc, audio_ipt, text="", meanpool = meanpool, model_sr = model_sr, device=device)

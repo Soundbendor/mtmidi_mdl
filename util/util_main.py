@@ -154,7 +154,7 @@ def get_acts_file(model_size, dataset='polyrhythms', fname='', write = True, use
     mode = 'r'
     shape = None
     if use_shape == None:
-        shape = get_acts_shape(model_size)
+        shape = get_acts_shape(model_size, seqlen=seqlen)
     else:
         shape = use_shape
     if use_64bit == True:
